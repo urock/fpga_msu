@@ -1,5 +1,414 @@
+\tikzstyle{block} = [draw,fill=blue!20,minimum size=2em]
+% diameter of semicircle used to indicate that two lines are not connected
+\tikzstyle{branch}=[fill,shape=circle,minimum size=3pt,inner sep=0pt]
+
 \chapter{Описание комбинационных устройств на VHDL}
 
 \emph{Последовательные и параллельные операторы. Комбинационные логические элементы и их описание на языке VHDL. Операторы выборочного и условного назначения сигналов. Оператор процесса. Запуск процесса и список чувствительности. Операторы IF и CASE. Правила кодирования комбинационных логических устройств на VHDL.}
 
-\section{Вывод на консоль во время симуляции}
+\section{Параллельное назначение сигналов в VHDL}
+
+В общем случае цифровые устройства можно разделить на комбинационные и последовательные. Комбинационная цепь не имеет памяти, и значения на ее выходах в каждый момент времени зависят только от значений на ее входах.  Последовательная цепь, напротив, имеет память (или внутреннее состояние), и значения на ее выходах зависят как от входных сигналов, так и от внутреннего состояния, т.е. от предыстории функционирования цепи. Операторы параллельного назначения сигналов описывают комбинационные цепи.
+
+\subsection{Простое назначение сигналов}
+\begin{lstlisting}
+status <= '1';
+even <= (p1 and p2) or (p3 and p4);
+
+arith_result <= a + b + c - 1;
+\end{lstlisting}
+Последнее выражение может быть изображено в виде следующей схемы:
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{arith_op} = [draw, fill=blue!20, circle, minimum size=2em]
+
+% inputs
+\node at (0,3) (input_a) {\texttt{a}};
+\node at (0,2) (input_b) {\texttt{b}};
+\node at (1,1) (input_c) {\texttt{c}};
+\node at (2,0) (input_1) {\texttt{1}};
+
+% operations
+\node[arith_op] at (1,2) (block_plus_1) {$+$};
+\node[arith_op] at (2,1) (block_plus_2) {$+$};
+\node[arith_op] at (3,0) (block_minus) {$-$};
+
+% connections
+\draw[->] (input_a) -- (1,3) -- node {} (block_plus_1);
+\draw[->] (input_b) -- node {} (block_plus_1);
+\draw[->] (block_plus_1) -- (2,2) -- node {} (block_plus_2);
+\draw[->] (input_c) -- node {} (block_plus_2);
+\draw[->] (block_plus_2) -- (3,1) -- node {} (block_minus);
+\draw[->] (input_1) -- node {} (block_minus);
+\draw[->] (block_minus) -- (4,0);
+\end{tikzpicture}
+\caption{Неоптимизированная комбинационная схема.}
+\label{comb_circuit_noopt}
+\end{figure}
+
+\textbf{\textit{Упражнение.}} Предположим, что задержки сумматора и блока, вычисляющего разность входных сигналов, одинаковы и равны $\delta$, предположим, что других задержек нет (например, мы не учитываем задержки в проводниках хотя они порой очень существенны). Тогда изменение входного сигнала a отразится на выходном сигнале \lstinline?arith_result? только через $3 \delta$, ведь сигнал должен пройти через три блока, каждый из которых вносит задержку $\delta$. С другой стороны изменение входного сигнала c отразится на выходном сигнале \lstinline?arith_result? только через $2 \delta$. Т.е. схема еще и несимметричная. Можно ли оптимизировать схему, чтобы временная задержка стала меньше, и схема стала симметричной? (Ответ приведен далее, но все же подумайте, попробуйте переставить блоки.)
+
+\textbf{\textit{Ответ.}} Воспользуемся коммутативностью и ассоциативностью сложения: 
+\[
+a + b + c - 1 = (a + b) + (c - 1).
+\]
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{arith_op} = [draw, fill=blue!20, circle, minimum size=2em]
+
+% inputs
+\node at (0,4) (input_a) {\texttt{a}};
+\node at (0,3) (input_b) {\texttt{b}};
+\node at (0,1) (input_c) {\texttt{c}};
+\node at (0,0) (input_1) {\texttt{1}};
+
+% operations
+\node[arith_op] at (1,3) (block_plus_1) {$+$};
+\node[arith_op] at (1,1) (block_plus_2) {$+$};
+\node[arith_op] at (2,2) (block_minus) {$-$};
+
+% connections
+\draw[->] (input_a) -- (1,4) -- node {} (block_plus_1);
+\draw[->] (input_b) -- node {} (block_plus_1);
+\draw[->] (input_c) -- node {} (block_plus_2);
+\draw[->] (input_1) -- (1,0) -- node {} (block_plus_2);
+\draw[->] (block_plus_1) -- (2,3) -- node {} (block_minus);
+\draw[->] (block_plus_2) -- (2,1) -- node {} (block_minus);
+\draw[->] (block_minus) -- (3,2);
+\end{tikzpicture}
+\caption{Оптимизированная комбинационная схема.}
+\label{comb_circuit_opt}
+\end{figure}
+
+При создании комбинационных схем \textbf{нельзя} назначать сигналы с обратной связью. С синтаксической точки зрения, следующие выражения корректны, они даже могут быть использованы в определенном контексте. Но их нельзя использовать непосредственно в архитектурном теле.
+
+\begin{lstlisting}
+architecture wrong_arch of wrong_entity is
+begin
+    -- внутреннее состояние:
+    q <= (q and (not  en)) or (d and en);
+
+    -- осцилляции q при en = '0':
+    q <= (not q and (not en)) or (d and en);
+    ...
+end wrong_arch
+\end{lstlisting}
+
+С другой стороны, следующий код корректен.
+
+\begin{lstlisting}
+architecture right_arch of right_entity is
+    signal q : std_logic_vector(3 downto 0);
+begin
+    q <= ('0' & q(3 downto 1)) and d;
+    ...
+    end right_arch;
+\end{lstlisting}
+
+Этот код – более компактная векторная запись следующего кода.
+
+\begin{lstlisting}
+architecture right_arch of right_entity is
+    signal q : std_logic_vector(3 downto 0);
+begin
+    q(3) <= '0'  and d(3);
+    q(2) <= q(3) and d(2);
+    q(1) <= q(2) and d(1);
+    q(0) <= q(1) and d(0);
+    ...
+end right_arch;
+\end{lstlisting}
+
+\subsection{Оператор условного назначения сигнала WHEN}
+Это параллельный оператор, реализующий выбор одного из возможных вариантов в зависимости от некоторых управляющих сигналов. В общем виде его можно записать следующим образом:
+
+\begin{lstlisting}
+ сигнал <= выражение_1    when условие_1     else 
+          выражение_2     when условие_2     else 
+          ...
+          выражение_(n-1) when условие_(n-1) else 
+          выражение_n;
+\end{lstlisting}
+
+\textbf{\textit{Пример 1.}} Восьмибитовый мультиплексор 4-в-1.
+Рассмотрим комбинационную схему, описываемую таблицей истинности:
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+input       & output \\ \hline
+s           & x      \\ \hline
+\texttt{00} & a      \\
+\texttt{01} & b      \\
+\texttt{10} & c      \\
+\texttt{11} & d      \\
+\hline
+\end{tabular}
+\end{table}
+
+VHDL код, реализующий эту схему такой:
+\begin{lstlisting}
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity mux4 is
+    port(
+        a, b, c, d : in std_logic_vector(7 downto 0);
+        s : in  std_logic_vector(1 downto 0);
+        x : out std_logic_vector(7 downto 0)
+    );
+end mux4;
+
+architecture cond_arch of mux4 is
+begin
+    x <= a when (s = "00") else
+         b when (s = "01") else
+         c when (s = "10") else
+         d;
+end cond_arch;
+\end{lstlisting}
+
+Сигнал \lstinline?x? – это выходной информационный сигнал; \lstinline?a?, \lstinline?b?, \lstinline?c?, \lstinline?d? – входные информационные сигналы, а \lstinline?s? – это сигнал управления, на основании которого осуществляется выбор одного из вариантов. 
+Рассмотрим еще пару примеров.
+
+\textbf{\textit{Пример 2.}} Бинарный дешифратор.
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+input       & output        \\ \hline
+s           & x             \\ \hline
+\texttt{00} & \texttt{0001} \\
+\texttt{01} & \texttt{0010} \\
+\texttt{10} & \texttt{0100} \\
+\texttt{11} & \texttt{1000} \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity decoder4 is
+    port(
+        s : in  std_logic_vector(1 downto 0);
+        x : out std_logic_vector(3 downto 0)
+    );
+end decoder4;
+
+architecture cond_arch of decoder4 is
+begin
+    x <= "0001" when (s = "00") else
+         "0010" when (s = "01") else
+         "0100" when (s = "10") else
+         "1000";
+end cond_arch;
+\end{lstlisting}
+
+\textbf{\textit{Пример 3.}} Шифратор приоритета.
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+input               & \multicolumn{2}{|c|}{output} \\ \hline
+r                   & code        & active         \\ \hline
+\texttt{1{-}{-}{-}} & \texttt{11} & \texttt{1}     \\
+\texttt{01{-}{-}}   & \texttt{10} & \texttt{1}     \\
+\texttt{001-}       & \texttt{01} & \texttt{1}     \\
+\texttt{0001}       & \texttt{00} & \texttt{1}     \\
+\texttt{0000}       & \texttt{00} & \texttt{0}     \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{lstlisting}
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity prio_encoder42 is
+    port(
+        r      : in  std_logic_vector(3 downto 0);
+        code   : out std_logic_vector(1 downto 0);
+        active : out std_logic
+    );
+end prio_encoder42;
+
+architecture cond_arch of prio_encoder42 is
+begin
+    code <= "11" when (r(3) = '1') else
+            "10" when (r(2) = '1') else
+            "01" when (r(1) = '1') else
+            "00";
+    active <= r(3) or r(2) or r(1) or r(0);
+end cond_arch;
+\end{lstlisting}
+
+Здесь выходной сигнал \lstinline?code? определяет, на какой из линий \lstinline?r(i)? присутствует логическая единица. Причем линия \lstinline?r(3)? имеет \textbf{приоритет} – если на ней будет \lstinline?'1'?, то \lstinline?code = "11"? вне зависимости от других линий. 
+
+Поговорим о том, как реализуется оператор условного назначения сигнала в железе. Семантика оператора условного назначения сигнала подразумевает создание приоритетной схемы, т.е. условия, стоящие выше имеют больший приоритет. При синтезе этого оператора реализуются три схемы:
+\begin{itemize}
+\item схема, вычисляющая возможные значения выходного сигнала,
+\item схема, вычисляющая условия,
+\item схема определения приоритета.
+\end{itemize}
+Чтобы лучше разобраться, что такое схема приоритета введем понятие абстрактного мультиплексора 2-в-1.
+
+Здесь \texttt{i1}, \texttt{i2}, \texttt{o} – $n$-битные шины, а сигнал \texttt{sel} однобитный. В зависимости от него на выход \texttt{o} идет либо \texttt{i1}, либо \texttt{i0}.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+% inputs
+\node at (0,2) (input_i1) {\texttt{i1}};
+\node at (0,1) (input_i0) {\texttt{i0}};
+\node at (0,0) (input_sel) {\texttt{sel}};
+
+% mux
+\draw [-,fill=blue!20](1,0.5) -- (1.5,1) -- (1.5,2) -- (1,2.5) -- cycle;
+
+\node[right] at (1,2) (true) {\texttt{T}};
+\node[right] at (1,1) (false) {\texttt{F}};
+
+\path[->] (input_i1) edge node [font=\tiny] {/} node [above] {$n$} (true);
+\path[->] (input_i0) edge node [font=\tiny] {/} node [above] {$n$} (false);
+
+\path[->] (1.5,1.5) edge node [font=\tiny] {/} node [above] {$n$} (2.5,1.5);
+\node[right] at (2.5,1.5) (true) {\texttt{o}};
+
+\draw[->] (input_sel) -- (1.25,0) -- (1.25,0.75);
+\end{tikzpicture}
+\caption{Символ абстрактного мультиплексора 2-в-1.}
+\label{abstract_mux_symb}
+\end{figure}
+
+Когда мы пишем на VHDL выражение:
+
+\begin{lstlisting}
+signal_name <= value_expr_1 when boolean_expr_1 else 
+               value_expr_2;
+\end{lstlisting}
+
+реализуется следующая схема с мультиплексором:
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{expr} = [draw, fill=yellow!20, dotted, rectangle, minimum size=2em]
+
+% inputs
+\node[expr] at (-1,2) (input_i1) {\texttt{value\_expr\_1}};
+\node[expr] at (-1,1) (input_i0) {\texttt{value\_expr\_2}};
+\node[expr] at (-1,0) (input_sel) {\texttt{boolean\_expr\_1}};
+
+% mux
+\draw [-,fill=blue!20](1,0.5) -- (1.5,1) -- (1.5,2) -- (1,2.5) -- cycle;
+
+\node[right] at (1,2) (true) {\texttt{T}};
+\node[right] at (1,1) (false) {\texttt{F}};
+
+\draw[->] (input_i1) -- (true);
+\draw[->] (input_i0) -- (false);
+
+\draw[->] (1.5,1.5) -- (2.5,1.5);
+\node[right] at (2.5,1.5) (true) {\texttt{sig}};
+
+\draw[->] (input_sel) -- (1.25,0) -- (1.25,0.75);
+\end{tikzpicture}
+\caption{Схема с мультиплексором 2-в-1.}
+\label{mux_fig_1}
+\end{figure}
+
+Каждый следующий уровень ветвления оператора условного назначения сигнала добавляет еще одну ступень в иерархию вместе с еще одним мультиплексором.
+
+\begin{lstlisting}
+signal_name <= value_expr_1 when boolean_expr_1 else 
+               value_expr_2 when boolean_expr_2 else 
+               value_expr_3;
+\end{lstlisting}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{expr} = [draw, fill=yellow!20, dotted, rectangle, minimum size=2em]
+
+\begin{scope}
+    % inputs
+    \node[expr] at (-1,2) (input_i1) {\texttt{value\_expr\_1}};
+    \node[expr,fill=red!20] at (-1,1) (input_rem) {\texttt{remaining\_part}};
+    \node[expr] at (-1,0) (input_sel) {\texttt{boolean\_expr\_1}};
+
+    % mux
+    \draw [-,fill=blue!20](1,0.5) -- (1.5,1) -- (1.5,2) -- (1,2.5) -- cycle;
+
+    \node[right] at (1,2) (true) {\texttt{T}};
+    \node[right] at (1,1) (false) {\texttt{F}};
+    
+    \draw[->] (input_i1) -- (true);
+    \draw[->] (input_rem) -- (false);
+
+    \draw[->] (1.5,1.5) -- (2,1.5);
+    \node[right] at (2,1.5) (true) {\texttt{sig}};
+
+    \draw[->] (input_sel) -- (1.25,0) -- (1.25,0.75);
+\end{scope}
+
+\begin{scope}[xshift=7cm]
+    % inputs
+    \node[expr] at (-2.5,2) (input_i1) {\texttt{value\_expr\_1}};
+    \node[expr] at (-2.5,1) (input_i2) {\texttt{value\_expr\_2}};
+    \node[expr] at (-2.5,0) (input_i3) {\texttt{value\_expr\_3}};
+    \node[expr] at (-2.5,-1) (input_sel2) {\texttt{boolean\_expr\_2}};
+    \node[expr] at (-2.5,-2) (input_sel1) {\texttt{boolean\_expr\_1}};
+
+    % mux
+    \draw [-,fill=blue!20](1,0.5) -- (1.5,1) -- (1.5,2) -- (1,2.5) -- cycle;
+    \draw [-,fill=blue!20](-0.5,-0.5) -- (0,0) -- (0,1) -- (-0.5,1.5) -- cycle;
+
+    \node[right] at (1,2) (true1) {\texttt{T}};
+    \node[right] at (1,1) (false1) {\texttt{F}};
+    
+    \node[right] at (-0.5,1) (true2) {\texttt{T}};
+    \node[right] at (-0.5,0) (false2) {\texttt{F}};
+    
+    \draw[->] (input_i1) -- (true1);
+    
+    \draw[->] (0,0.5) -- (0.5,0.5) -- (0.5,1) -- (false1);
+    
+    \draw[->] (input_i2) -- (true2);
+    \draw[->] (input_i3) -- (false2);
+
+    \draw[->] (1.5,1.5) -- (2,1.5);
+    \node[right] at (2,1.5) (true1) {\texttt{sig}};
+
+    \draw[->] (input_sel2) -- (-0.25,-1) -- (-0.25,-0.25);
+    \draw[->] (input_sel1) -- (1.25,-2) -- (1.25,0.75);
+\end{scope}
+\end{tikzpicture}
+\caption{Схема с мультиплексорами 2-в-1.}
+\label{mux_fig_1}
+\end{figure}
+
+\subsection{Оператор выборочного назначения сигнала WITH ... SELECT}
+
+Это параллельный оператор, также реализующий выбор одного из возможных вариантов в зависимости от некоторых управляющих сигналов. Во многом он похож на оператор условного назначения, но есть и отличия. Записать в общем виде его можно так:
+
+\begin{lstlisting}[mathescape]
+with задающее$\_$выражение select
+    сигнал <=
+        выражение_1 when выбор_1,
+        выражение_2 when выбор_2,
+        выражение_3 when выбор_3,
+        ...
+        выражение_n when выбор_n;
+\end{lstlisting}
+
+Обратите внимание на использование \emph{запятых} после каждого выборочного значения (\lstinline?выбор_i?) и на точку с запятой в конце.
+
+Выборочные значения (\lstinline?выбор_i?) должны быть \textbf{взаимно исключающими} (значения не должны перекрываться или повторяться) и \textbf{полными} (все значения должны быть перечислены). Для обеспечения полноты выборочных значений рекомендуется использовать \lstinline?others?. Заметим, что выборочные значения~-- это именно значения, а не условия.
+
+Примеры из предыдущего параграфа можно переписать с использование оператора выборочного назначения сигнала. 
