@@ -25,3 +25,8 @@
 \def\lst@PlaceNumber{\ifnum\value{lstnumber}=0\else
   \llap{\normalfont\lst@numberstyle{\thelstnumber}\kern\lst@numbersep}\fi}
 \makeatother
+
+\usepackage{float}
+\floatstyle{plain} % optionally change the style of the new float
+\newfloat{Code}{H}{myc}
+
