@@ -18,7 +18,6 @@
 \usepackage{indentfirst}                    % Делать отступ в начале параграфа
 \usepackage{enumerate}                      % Создание и автоматическая нумерация списков
 \usepackage{tabularx}                       % Продвинутые таблицы
-%\usepackage{float}                          % Управление "плавающими" объектами
 \usepackage{floatrow}                       % Продвинутое управление плавающими объектами
 \usepackage{cite}                           % "Умные" библиографические ссылки (сортировка и сжатие)
 \usepackage{multirow}                       % Возможность объединять строки в таблицах
@@ -42,19 +41,23 @@
   firstnumber=0,
   backgroundcolor=\color{gray!10},
   inputencoding=utf8,
-  extendedchars=\true,
+  extendedchars=false,
   keepspaces=true,
   breaklines=true,
   commentstyle=\color{green!60!black},
-  texcl=true
+  % texcl=true
 }
 
 \usepackage{tikz}
-\usetikzlibrary{arrows,calc}
+\usetikzlibrary{arrows,calc,shapes.gates.logic.US}
 
 \makeatletter
 \def\lst@PlaceNumber{\ifnum\value{lstnumber}=0\else
   \llap{\normalfont\lst@numberstyle{\thelstnumber}\kern\lst@numbersep}\fi}
 \makeatother
+
+\usepackage{float}                          % Управление "плавающими" объектами
+\floatstyle{plain} % optionally change the style of the new float
+\newfloat{Code}{H}{myc}
 
 \newcommand\exsect[1]{\textbf{\textit{\underline{#1}}}}
