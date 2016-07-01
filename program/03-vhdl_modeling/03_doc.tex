@@ -16,6 +16,17 @@
 
 \subsection{VHDL конструкции для синтеза и для моделирования}
 
+
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\draw (0,0) ellipse (20pt and 10pt);
+\end{tikzpicture}
+\caption{Синтезируемое подмножество языка VHDL.}
+\label{vhdl_set_1}
+\end{figure}
+
 \subsection{Простейшая testbench и визуальный анализ сигналов}
 
 \section{Хорошая практика моделирования}
@@ -125,3 +136,55 @@ end process WRITE_FILE;
 
 \subsection{Самопроверяющейся тестбенч}
 
+
+
+Смотрите рисункок~\ref{tb_1}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+
+\node[process] at (-3,0) (p1) {Input process};
+\node[process] at (0,0) (p2) {DUT};
+\node[process] at (3,0) (p3) {Output process};
+\node[process] at (0,-3) (p4) {Expected data process};
+\node[process] at (3,-3) (p5) {Compare data process};
+
+\draw[->, very thick] (p1) -- (p2);
+\draw[->, very thick] (p1) -- (-3,-3) -- (p4);
+\draw[->, very thick] (p2) -- (p3);
+\draw[->, very thick] (p3) -- (p5);
+\draw[->, very thick] (p4) -- (p5);
+
+\end{tikzpicture}  
+\caption{Блок-схема самопроверяющегося тестбенча с автогенерацией данных.}
+\label{tb_1}
+\end{figure}
+
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+
+
+\node[process] at (-3,0) (p1) {Input process};
+\node[process] at (0,0) (p2) {DUT};
+\node[process] at (3,0) (p3) {Output process};
+\node[process] at (0,-3) (p4) {Expected data process};
+\node[process] at (3,-3) (p5) {Compare data process};
+
+\node[expr] at (-7,0) (f1) {\texttt{Input Data File}};
+\node[expr] at (-4,-3) (f2) {\texttt{Golden Output File}};
+
+\draw[->, very thick] (f1) -- (p1);
+\draw[->, very thick] (p1) -- (p2);
+\draw[->, very thick] (f2) -- (p4);
+\draw[->, very thick] (p2) -- (p3);
+\draw[->, very thick] (p3) -- (p5);
+\draw[->, very thick] (p4) -- (p5);
+
+
+\end{tikzpicture}  
+\caption{Блок-схема самопроверяющегося тестбенча с чтением входных и опорных выходных данных из файла .}
+\label{tb_2}
+\end{figure}
