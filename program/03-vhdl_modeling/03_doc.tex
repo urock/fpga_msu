@@ -241,7 +241,7 @@ end process Shift_5;
 
 \subsection{Лабораторная работа. Моделирование сумматора и визуальный анализ сигналов}
 
-\include{lab3-0}
+\input{03-vhdl_modeling/lab3-0}
 
 \section{Хорошая практика моделирования}
 
@@ -293,10 +293,11 @@ Counter overflow - 16
 
 Итак, для использования файлового ввода/выводы надо использовать туже библиотеку, что и для вывода на экран.
 
+\begin{framed}
 \begin{lstlisting}
 use textio.all;
 \end{lstlisting}
-
+\end{framed}
 Объявление и открытие файла просходит с помощью следующей конструкции
 
 \begin{lstlisting}
@@ -406,4 +407,4 @@ end process WRITE_FILE;
 
 \subsection{Лабораторная работа. Моделирование генератора кода Грея с автопроверкой результата}
 
-\include{lab3-1}
+\input{03-vhdl_modeling/lab3-1}
