@@ -3,7 +3,7 @@
 set part "xc7a50tcsg324-3"
 set project_name "g_inc"
 set top_entity	$project_name
-set top_entity_tb	($project_name)_tb
+set top_entity_tb	${project_name}_tb
 
 set orgDir "."
 set srcDir	"$orgDir/src"
@@ -21,7 +21,6 @@ set src_files [list \
  "$srcDir/g_inc.vhd"\
  ]
 
-puts $src_files
 
 # create testbench files list
 set tb_files [list \

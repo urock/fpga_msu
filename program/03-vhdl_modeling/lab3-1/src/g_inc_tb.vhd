@@ -115,7 +115,7 @@ BEGIN
       results_ready <= '1';
 
       wait;
-   end
+   end process;
 
 
    -- compare results process
@@ -172,6 +172,6 @@ BEGIN
 
       wait;
 
-   end
+   end process;
 
 END;

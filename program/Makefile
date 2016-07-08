@@ -18,18 +18,20 @@ FILES = include/settings.tex \
 		12-hardware_debug/12_doc.tex
 
 
-all: $(TOP_FILE).dvi $(TOP_FILE).pdf
+# all: $(TOP_FILE).dvi $(TOP_FILE).pdf
+all: $(TOP_FILE).pdf
+
+# $(TOP_FILE).dvi: $(FILES)
+# 	latex $(TOP_FILE).tex && latex $(TOP_FILE).tex
 
 
-$(TOP_FILE).dvi: $(FILES)
-	latex $(TOP_FILE).tex && latex $(TOP_FILE).tex
-
-
-$(TOP_FILE).pdf: $(TOP_FILE).dvi
-	dvipdf $(TOP_FILE).dvi 
+# $(TOP_FILE).pdf: $(TOP_FILE).dvi
+$(TOP_FILE).pdf: $(FILES)	
+	pdflatex $(TOP_FILE).tex && pdflatex $(TOP_FILE).tex
 
 
 clean:	
-	rm *.aux
-	rm */*.aux
-	rm $(TOP_FILE).dvi $(TOP_FILE).idx $(TOP_FILE).log $(TOP_FILE).toc
+	# rm *.aux
+	# rm */*.aux
+	# rm $(TOP_FILE).dvi $(TOP_FILE).idx $(TOP_FILE).log $(TOP_FILE).toc
+	rm *.pdf

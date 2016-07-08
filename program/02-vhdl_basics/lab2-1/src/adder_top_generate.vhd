@@ -23,16 +23,16 @@ use IEEE.STD_LOGIC_1164.ALL;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 
-entity adder_top_gen is
+entity adder_gen is
     Port (
 
 			switch_in 	: in  STD_LOGIC_VECTOR (7 downto 0);
 			leds_out 	: out STD_LOGIC_VECTOR (7 downto 0)
 
 			  );
-end adder_top_gen;
+end adder_gen;
 
-architecture rtl of adder_top_gen is
+architecture rtl of adder_gen is
 
 
 -- объявление компонента
@@ -55,6 +55,7 @@ signal S		: std_logic_vector(3 downto 0);
 begin
 
 
+
 A 	<= switch_in(7 downto 4);
 B	<= switch_in(3 downto 0);
 
@@ -66,7 +67,7 @@ C(0) <= '0';
 g1: for i in 0 to 3 generate
 begin
 
-	b: full_adder port map (
+	add: full_adder port map (
 			a 		=> A(i),
 			b 		=> B(i),
 			c_in 	=> C(i),

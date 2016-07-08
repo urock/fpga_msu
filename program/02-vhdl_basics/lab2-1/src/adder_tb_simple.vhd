@@ -6,7 +6,7 @@ end adder_tb;
 
 architecture behavior of adder_tb IS
 
-   component adder_top
+   component adder_gen
    port(
       switch_in : in  std_logic_vector(7 downto 0);
       leds_out : out  std_logic_vector(7 downto 0)
@@ -24,7 +24,7 @@ architecture behavior of adder_tb IS
 begin
 
    -- Instantiate the Design Under Test (DUT)
-   dut: adder_top port map (
+   dut: adder_gen port map (
       switch_in => switch_in,
       leds_out => leds_out
    );
