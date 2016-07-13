@@ -7,6 +7,7 @@ FILES = include/settings.tex \
 		03-vhdl_modeling/03_doc.tex \
 		03-vhdl_modeling/lab3-0.tex \
 		03-vhdl_modeling/lab3-1.tex \
+		03-vhdl_modeling/lab3-1/src/g_inc.vhd \
 		04-comb_elements/04_doc.tex \
 		05-sequential_elements/05_doc.tex \
 		06-fpga_architecture/06_doc.tex \

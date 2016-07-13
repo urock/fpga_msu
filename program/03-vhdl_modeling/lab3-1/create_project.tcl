@@ -1,5 +1,4 @@
 
-
 set part "xc7a50tcsg324-3"
 set project_name "g_inc"
 set top_entity	$project_name

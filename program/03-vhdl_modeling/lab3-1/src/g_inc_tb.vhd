@@ -1,23 +1,22 @@
-LIBRARY ieee;
-USE ieee.std_logic_1164.ALL;
-use ieee.std_logic_textio.ALL;
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_textio.all;
 
-library STD;
-use STD.TEXTIO.all;
+library std;
+use std.textio.all;
 
-ENTITY g_inc_tb IS
-END g_inc_tb;
+entity g_inc_tb is
+end g_inc_tb;
 
-ARCHITECTURE behavior OF g_inc_tb IS
+architecture behavior of g_inc_tb is
 
-    -- Component Declaration for the Unit Under Test (UUT)
-
-    COMPONENT g_inc
-    PORT(
-         g : IN  std_logic_vector(3 downto 0);
-         g_next : OUT  std_logic_vector(3 downto 0)
+    -- Component Declaration for the Design Under Test (DUT)
+    component g_inc
+    port(
+         g      : in   std_logic_vector(3 downto 0);
+         g_next : out  std_logic_vector(3 downto 0)
         );
-    END COMPONENT;
+    end component;
 
 
    --Inputs
@@ -31,7 +30,6 @@ ARCHITECTURE behavior OF g_inc_tb IS
    type input_vector_record is record
       test_num: integer; -- Test Number
       input: std_logic_vector(3 downto 0); -- Test input
-
    end record;
 
    type input_vector_array is array (integer range 1 to 16) of input_vector_record;
@@ -61,15 +59,13 @@ ARCHITECTURE behavior OF g_inc_tb IS
 
    signal expected_output_vectors : output_vector_array;
    signal real_output_vectors : output_vector_array;
-
    signal test_result : bool_array (1 to 16);
-
    signal results_ready : std_logic := '0';
 
-BEGIN
+begin
 
-   -- Instantiate the Unit Under Test (UUT)
-   uut: g_inc PORT MAP (
+   -- Instantiate the Design Under Test (DUT)
+   dut: g_inc port map (
           g => g,
           g_next => g_next
         );
@@ -103,12 +99,11 @@ BEGIN
    catch_proc: process
    begin
 
-      results_ready <= '0';
       wait for 100 ns;
 
       for i in 1 to 16 loop
          wait for clk_period;
-         real_output_vectors <= g_next;
+         real_output_vectors(i) <= g_next;
       end loop;
 
       wait for clk_period;
@@ -128,6 +123,7 @@ BEGIN
       file   fd    : text is in  "../../../../src/gray_golden_output.txt";
 
       variable j : integer;
+      variable error : boolean := false;
 
    begin
 
@@ -140,11 +136,13 @@ BEGIN
          j := j + 1;
       end loop;
 
-
       wait until results_ready = '1';
 
       for i in 1 to 16 loop
-         test_result(i) <= (real_output_vectors = expected_output_vectors(i));
+         test_result(i) <= (real_output_vectors(i) = expected_output_vectors(i));
+         if (not test_result(i)) then
+            error := true;
+         end if;
       end loop;
 
       wait for clk_period;
@@ -155,7 +153,6 @@ BEGIN
       Write ( Message, string'("-- Summary:")&LF);
 
       for i in 1 to 16 loop
-
          if (test_result(i)) then
             Write ( Message, string'("-- Test "));
             Write ( Message, i);
@@ -165,13 +162,18 @@ BEGIN
             Write ( Message, i);
             Write ( Message, string'(": FAIL")&LF);
          end if;
-
       end loop;
 
       writeline(output, Message);
+      
+      if (error) then
+         Write ( Message, string'("Status Error"));
+      else 
+         Write ( Message, string'("Status OK"));
+      end if; 
+        
+      writeline(output, Message);  
 
       wait;
-
    end process;
-
-END;
+end;
