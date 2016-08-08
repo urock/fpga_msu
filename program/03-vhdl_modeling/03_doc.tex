@@ -76,7 +76,7 @@ end behavior;
 
 В данном случае в архитектуре модуля объявлено 2 сигнала типа \emph{integer} - x и y. Сигнал x - входной сигнал для процесса, он объявден в списке чувствительности. При любом изменении сигнала x, процесс будет запускаться, и последовательные операторы будут выполняться до конца процесса, в конце которого сигналу y будет присвоено новое значение. Следует обратить внимание на ралимчия между сигналами и переменными. Областью видимости сигналов является вся архитектура модуля, т.е. он может быть использован в любом параллельном операторе этого модуля. Переменные же могут быть объявлена только внутри процесса, и их область видимости ограничена этим процессом. Также существует разница в операторах присвоения значений сигналам и переменным. Для переменных оператор присваивания обозначается как :=, а для сигналов <=. Присваивание переменных является блокирующим (blocking), т.е. значение переменной будет обновлено мнгновенно. На практике это означает, что внутри процесса можно присваивать разные значения одной переменной несколько раз, и каждый раз оно будет меняться. При этом присваивание сигналов является неблокирующем (nonblocking), т.е. значение сигнала не изменится до тех пор пока процесс не будет завершен, при этом сигнал сразу примет последнее присвоенное значение. Это означает, что сигнал y никогда не примет значение \emph{a+b}, присвоенное ему на 11 строчке листинга \ref{process_2}, а сразу примет значение \emph{a+b+c}, присвоенное на 12 строчке.
 
-Термины blocking и nonblocking идут из системного программирования при осуществленнии вывода из программы, работающей под управлением операционной системы. Blocking означает, что процесс блокируется до окончания операции записи, а при осущетсвлении nonblocking записи процесс не будет дожидаться полного окончания вывода данных (например на экран или диск), а просто скопирует данные для вывода в другой процесс операционной системы, и сам продолжит выполнение. Аналогия с VHDL тут такая, что при записи в переменную (blocking) процесс как бы останавливается (не выполняется дальше), пока значение переменной не измениться, а при назначении сигнала (nonblocking) процесс продолжает выполнение, а значение сигнала обновиться чуть позже.
+Термины blocking и nonblocking идут из системного программирования при осуществленнии вывода из программы, работающей под управлением операционной системы. Blocking означает, что процесс блокируется до окончания операции записи, а при осущетсвлении nonblocking записи процесс не будет дожидаться полного окончания вывода данных (например на экран или диск), а просто скопирует данные для вывода в другой процесс операционной системы, и сам продолжит выполнение. Аналогия с VHDL тут такая, что при записи в переменную (blocking) процесс как бы останавливается (не выполняется дальше), пока значение переменной не измениться \footnote{Впрочем, значение переменной изменяется мгновенно, поэтому никакой задержки выполнения процесса не происходит}, а при назначении сигнала (nonblocking) процесс продолжает выполнение, а значение сигнала обновиться чуть позже \footnote{Когда процесс будет завершен}.
 
 \subsubsection{Процессы с пустым списком чувствительности}
 
@@ -141,12 +141,12 @@ end DELAYS;
 
 \subsubsection{Операторы циклов внутри процессов}
 
-Внутри процессов можно использовать операторы циклов, похожие на циклы из последовательных языков программирования. Операторы циклов синтезируемы только частично. Дело в том, что на каждую итерацию цикла создается своя цифровая схема, поэтому циклы, число итераций которых неизвестно во время компиляции кода, а также бесконечные циклы, не могут быть синтезированы. Циклы очень удобны и часто применяются при моделировании, при синтезе следует ограничиваться использованием циклов для перебора и совершения действий над ограниченным набором операндов, например над битами шины данных.
-
+Внутри процессов можно использовать операторы циклов, похожие на циклы из последовательных языков программирования. Операторы циклов синтезируемы только частично. Дело в том, что на каждую итерацию цикла создается своя цифровая схема, поэтому циклы, число итераций которых (листинг неизвестно во )время компиляции кода, а также бесконечные циклы, не могут быть синтезированы. Циклы очень удобны и часто применяю(листинг тся при моделировании), при синтезе следует ограничиваться использованием циклов для перебора и совершения действий над ограниченным набором операндов, например над битами шины данн(листинг ых.
+)
 Общий синтаксис циклов представлен на листинге \ref{loop_0}.
 
 \begin{Code}
-\begin{lstlisting}[caption=Синтаксис циклов, label=loop_0]
+\begin{lstlisting}(листинг [caption=Синтаксис )циклов, label=loop_0]
 loop_label: while condition loop
   -- последовательные операторы
   end loop loop_label;
@@ -157,21 +157,11 @@ loop_label: for loop_parameter in range loop
 \end{lstlisting}
 \end{Code}
 
-У циклов, как и у процессов может быть необязательня метка цикла (loop\_label).
-
-A loop statement can have several different forms depending on the iteration scheme preceding the reserved word loop. In its simplest form, no iteration scheme is specified and the loop is repeated indefinitely (Example 1).
-
-In order to exit from an infinite loop, an exit statement has to be used. See exit statement for details. An exit statement can be specified with a condition that must be met to exit the loop (Example 2).
-
-Instead of specifying an infinite loop with a conditional exit statement, a while loop can be used. In such a case the reserved word while with a condition precede the keyword loop. The sequence of statements inside the loop will be executed if the condition of the iteration scheme is true. The condition is evaluated before each execution of the sequence of statements. When the condition is false, the loop is not entered and the control is passed to the next statement after the end loop clause (Example 3).
-
-Another iteration scheme is useful when a discrete range can define the number of iterations. In this case the keyword for with a loop parameter precede the keyword loop. The header of the loop also specifies the discrete range for the loop parameter. In each iteration the parameter takes one value from the specified range, starting from the leftmost value within the range (Example 4).
-
-The discrete range can also be declared in the form of a discrete type (example 5), including an enumerated type.
+У циклов, как и у процессов может быть необязательня метка цикла (loop\_label). Оператор цикла может иметь несколько форм в зависимости от итерационной схемы, задаваемой непосредственно перед зарезервированным словом \emph{loop}. В тривиальном случае, когда итерационная схема отсутствует, цикл становится бесконечным (листинг \ref{loop_1}). Для выхода из бесконечного цикла необходимо использовать оператор \emph{exit} вместе с условием выхода (листинг \ref{loop_2}). Вместо использования бесконечного цикла с условием выхода можно использовать цикл в форме \emph{while}. В этом случае перед циклом указывается зарезервиванное слово \emph{while} и условие \emph{входа в цикл}. Последовательность операторов внутри цикла будет выполнена, если условие равно \emph{true}. Условие проверяется перед каждой итерацией цикла. Если перед очередной итерацией условие равно \emph{false}, то цикл не выполняется, а управление переходит следующим за ним операторам (листинг \ref{loop_3}). Когда заранее известно количество итераций, может быть использована итерационная схема типа \emph{for}. В этом случае перед циклом указывается зарезервированное слово \emph{for}, итератор цикла и его границы. Для каждой итерации цикла итератор будет принимать целые значения из указанного диапазона (листинг \ref{loop_4}).
 
 
 \begin{Code}
-\begin{lstlisting}[caption=Синтаксис циклов, label=loop_1]
+\begin{lstlisting}[caption=Бесконечный цикл, label=loop_1]
 signal Clock : BIT := '0';
 Clk_1: process (Clock)
 begin
@@ -182,11 +172,8 @@ end process Clk_1;
 \end{lstlisting}
 \end{Code}
 
-The process (which is a clocking signal generator) contains a loop without an iteration scheme, which will iterate indefinitely.
-
-
 \begin{Code}
-\begin{lstlisting}[caption=Синтаксис циклов, label=loop_2]
+\begin{lstlisting}[caption=Бесконечный цикл с условием выхода, label=loop_2]
 L2: loop
   A:= A+1;
   exit L2 when A > 10;
@@ -194,11 +181,8 @@ end loop L2;
 \end{lstlisting}
 \end{Code}
 
-The infinite loop becomes in practice a finite, as the iterations will terminate as soon as the variable A becomes greater than 10.
-
-
 \begin{Code}
-\begin{lstlisting}[caption=Синтаксис циклов, label=loop_3]
+\begin{lstlisting}[caption=Цикл While, label=loop_3]
 Shift_3: process (Input_X)
   variable i : POSITIVE := 1;
 begin
@@ -210,11 +194,8 @@ end process Shift_3;
 \end{lstlisting}
 \end{Code}
 
-The loop L3 will be repeated as long as the value of the variable i is not greater than 8. When i reaches the value of 9 the loop is no longer repeated.
-
-
 \begin{Code}
-\begin{lstlisting}[caption=Синтаксис циклов, label=loop_4]
+\begin{lstlisting}[caption=Цикл For, label=loop_4]
 Shift_4: process (Input_X)
 begin
   L4: for count_value in 1 to 8 loop
@@ -224,20 +205,6 @@ end process Shift_4;
 \end{lstlisting}
 \end{Code}
 
-In the above example the loop statement parameter count\_value will cause the loop to execute 8 times, with the value of count\_value changing from 1 to 8.
-
-
-\begin{Code}
-\begin{lstlisting}[caption=Синтаксис циклов, label=loop_5]
-Shift_5: process (Input_X)
-subtype Range_Type is POSITIVE range 1 to 8;
-begin
-  L5: for count_value in Range_Type loop
-    Output_X(count_value) <= Input_X(count_value +8) after 5 ns;
-  end loop L5;
-end process Shift_5;
-\end{lstlisting}
-\end{Code}
 
 \section{Лабораторная работа. Моделирование сумматора и визуальный анализ сигналов}
 
@@ -286,7 +253,7 @@ end behavior;
 
 Counter overflow - 16
 
-Чтобы можно было записывать в переменную типа \emph{line} значения типа \emph{std\_logic}, помимо стандартной библиотеки \emph{textio} необходимо включить еще пакет
+Чтобы можно было записывать в переменную типа \emph{line} значения типа \emph{std\_logic}, помимо стандартной библиотеки \emph{textio} необходимо включить еще пакеты
 \begin{lstlisting}
 library ieee;
 use ieee.std_logic_1164.all;
@@ -340,7 +307,7 @@ WRITE_FILE: process (CLK)
   file VEC_FILE : text is out "results";
 begin
   -- strobe OUT_DATA on falling edges
-  -- of CLK and write value out to file
+  -- of CLK and write value out to file ыв
   if CLK='0' then
     write (VEC_LINE, OUT_DATA);
     writeline (VEC_FILE, VEC_LINE);
@@ -354,9 +321,7 @@ end process WRITE_FILE;
 
 \subsection{Самопроверяющейся тестбенч}
 
-
-
-Смотрите рисункок~\ref{tb_1}
+Имея в арсенале стандартные средства воода/вывода при моделировании схем можно создавать тестбенчи с автопроверкой результата, и использовать визуальный анализ вейформ не для проверки правильности результата, а лишь для отладки схемы. Самопроверяющийся тестбенч основан на следующей идее. Подавая известные тестовые воздействия (входные сигналы) на Design Under Test (DUT), мы можем ожидать известные тестовые отклики (выходные сигналы). Тестовые входные воздействия могут быть как сгенерированны автоматически самим тестбенчем (см. рис. \ref{tb_1}), так и прочитаны из файла (см. рис. \ref{tb_2}). В случае, если мы читаем входные данные из файла, то всего мы имеем и соответствующие им выходные данные тоже в файле, откуда мы можем их прочитать. Если входные данные генерируются, то скорее всего мы можем просто получить соответствующие им выходные данные с помщью несинтезируемых конструкций VHDL. В любом случае мы должны сравниить эти данные друг с другом (Compare Data Process), и выдать ошибку, если они не совпадают. В обоих случаях на картинках Output process - это процесс чтения выходных данных из DUT (с ипользованием протокола конкретной схемы) и сохранения их в переменных или массивах данных тестбенча. 
 
 \begin{figure}[ht]
 \centering
