@@ -66,16 +66,15 @@ begin
 
    -- Instantiate the Design Under Test (DUT)
    dut: g_inc port map (
-          g => g,
-          g_next => g_next
-        );
+         g => g,
+         g_next => g_next
+      );
 
 
-   -- Stimulus process
+   -- Input process
    stim_proc: process
       variable Message : line;
    begin
-
       wait for 100 ns;
 
       for i in 1 to 16 loop
@@ -88,14 +87,13 @@ begin
          g <= test_input_vectors(i).input;
 
          wait for clk_period;
-
       end loop;
 
       wait;
    end process;
 
 
-   -- Catch outpus process
+   -- Output process
    catch_proc: process
    begin
 
@@ -113,20 +111,13 @@ begin
    end process;
 
 
-   -- compare results process
-   copmare_proc: process
-
-      variable Message : line;
-      variable inline : line;
-      variable tmp_vector : std_logic_vector(3 downto 0);
-
+   -- Expected data process
+   expected_proc: process
       file   fd    : text is in  "../../../../src/gray_golden_output.txt";
-
+      variable inline : line;
       variable j : integer;
-      variable error : boolean := false;
-
+      variable tmp_vector : std_logic_vector(3 downto 0);
    begin
-
       ---- read golden data
       j := 1;
       while (not endfile(fd)) loop
@@ -135,6 +126,17 @@ begin
          expected_output_vectors(j) <= tmp_vector;
          j := j + 1;
       end loop;
+
+      wait; 
+
+   end process; 
+   
+
+   -- Compare data process
+   copmare_proc: process
+      variable Message : line;
+      variable error : boolean := false;
+   begin
 
       wait until results_ready = '1';
 
@@ -146,7 +148,6 @@ begin
       end loop;
 
       wait for clk_period;
-
 
       Write ( Message, LF);
       Write ( Message, string'("-- DRP Cycle Tests Completed!")&LF);
