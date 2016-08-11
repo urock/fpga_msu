@@ -1,0 +1,1579 @@
+\chapter{Описание комбинационных устройств на VHDL}
+
+\emph{Последовательные и параллельные операторы. Комбинационные логические элементы и их описание на языке VHDL. Операторы выборочного и условного назначения сигналов. Оператор процесса. Запуск процесса и список чувствительности. Операторы IF и CASE. Правила кодирования комбинационных логических устройств на VHDL.}
+
+\section{Параллельное назначение сигналов в VHDL}
+
+В общем случае цифровые устройства можно разделить на комбинационные и последовательные. Комбинационная цепь не имеет памяти, и значения на ее выходах в каждый момент времени зависят только от значений на ее входах.  Последовательная цепь, напротив, имеет память (или внутреннее состояние), и значения на ее выходах зависят как от входных сигналов, так и от внутреннего состояния, т.е. от предыстории функционирования цепи. Операторы параллельного назначения сигналов описывают комбинационные цепи.
+
+\subsection{Простое назначение сигналов}
+\begin{Code}
+\begin{lstlisting}
+<<<<<<< HEAD
+status        <= '1';
+even          <= (p1 and p2) or (p3 and p4);
+arith_result  <= a + b + c - 1;
+=======
+status       <= '1';
+even         <= (p1 and p2) or (p3 and p4);
+arith_result <= a + b + c - 1;
+>>>>>>> comb_elements_devel
+\end{lstlisting}
+\end{Code}
+Последнее выражение может быть изображено в виде следующей схемы:
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{arith_op} = [draw, fill=blue!20, circle, minimum size=2em]
+
+% inputs
+\node at (0,3) (input_a) {\texttt{a}};
+\node at (0,2) (input_b) {\texttt{b}};
+\node at (1,1) (input_c) {\texttt{c}};
+\node at (2,0) (input_1) {\texttt{1}};
+
+% operations
+\node[arith_op] at (1,2) (block_plus_1) {$+$};
+\node[arith_op] at (2,1) (block_plus_2) {$+$};
+\node[arith_op] at (3,0) (block_minus) {$-$};
+
+% connections
+\draw[->] (input_a) -- (1,3) -- node {} (block_plus_1);
+\draw[->] (input_b) -- node {} (block_plus_1);
+\draw[->] (block_plus_1) -- (2,2) -- node {} (block_plus_2);
+\draw[->] (input_c) -- node {} (block_plus_2);
+\draw[->] (block_plus_2) -- (3,1) -- node {} (block_minus);
+\draw[->] (input_1) -- node {} (block_minus);
+\draw[->] (block_minus) -- (4,0);
+\end{tikzpicture}
+\caption{Неоптимизированная комбинационная схема.}
+\label{comb_circuit_noopt}
+\end{figure}
+
+\exsect{Упражнение.} Предположим, что задержки сумматора и блока, вычисляющего разность входных сигналов, одинаковы и равны $\delta$, предположим, что других задержек нет (например, мы не учитываем задержки в проводниках хотя они порой очень существенны). Тогда изменение входного сигнала a отразится на выходном сигнале \lstinline?arith_result? только через $3 \delta$, ведь сигнал должен пройти через три блока, каждый из которых вносит задержку $\delta$. С другой стороны изменение входного сигнала c отразится на выходном сигнале \lstinline?arith_result? только через $2 \delta$. Т.е. схема еще и несимметричная. Можно ли оптимизировать схему, чтобы временная задержка стала меньше, и схема стала симметричной? (Ответ приведен далее, но все же подумайте, попробуйте переставить блоки.)
+
+\exsect{Ответ.} Воспользуемся коммутативностью и ассоциативностью сложения: 
+\[
+a + b + c - 1 = (a + b) + (c - 1).
+\]
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{arith_op} = [draw, fill=blue!20, circle, minimum size=2em]
+
+% inputs
+\node at (0,4) (input_a) {\texttt{a}};
+\node at (0,3) (input_b) {\texttt{b}};
+\node at (0,1) (input_c) {\texttt{c}};
+\node at (0,0) (input_1) {\texttt{1}};
+
+% operations
+\node[arith_op] at (1,3) (block_plus_1) {$+$};
+\node[arith_op] at (1,1) (block_plus_2) {$+$};
+\node[arith_op] at (2,2) (block_minus) {$-$};
+
+% connections
+\draw[->] (input_a) -- (1,4) -- node {} (block_plus_1);
+\draw[->] (input_b) -- node {} (block_plus_1);
+\draw[->] (input_c) -- node {} (block_plus_2);
+\draw[->] (input_1) -- (1,0) -- node {} (block_plus_2);
+\draw[->] (block_plus_1) -- (2,3) -- node {} (block_minus);
+\draw[->] (block_plus_2) -- (2,1) -- node {} (block_minus);
+\draw[->] (block_minus) -- (3,2);
+\end{tikzpicture}
+\caption{Оптимизированная комбинационная схема.}
+\label{comb_circuit_opt}
+\end{figure}
+
+При создании комбинационных схем \textbf{нельзя} назначать сигналы с обратной связью. С синтаксической точки зрения, следующие выражения корректны, они даже могут быть использованы в определенном контексте. Но их нельзя использовать непосредственно в архитектурном теле.
+
+\begin{Code}
+\begin{lstlisting}
+architecture wrong_arch of wrong_entity is
+begin
+    -- внутреннее состояние:
+    q <= (q and (not  en)) or (d and en);
+    -- осцилляции q при en = '0':
+    q <= (not q and (not en)) or (d and en);
+end wrong_arch
+\end{lstlisting}
+\end{Code}
+С другой стороны, следующий код корректен.
+\begin{Code}
+\begin{lstlisting}
+architecture right_arch of right_entity is
+    signal q : std_logic_vector(3 downto 0);
+begin
+    q <= ('0' & q(3 downto 1)) and d;
+end right_arch;
+\end{lstlisting}
+\end{Code}
+
+Этот код – более компактная векторная запись следующего кода.
+
+\begin{Code}
+\begin{lstlisting}
+architecture right_arch of right_entity is
+    signal q : std_logic_vector(3 downto 0);
+begin
+    q(3) <= '0'  and d(3);
+    q(2) <= q(3) and d(2);
+    q(1) <= q(2) and d(1);
+    q(0) <= q(1) and d(0);
+    ...
+end right_arch;
+\end{lstlisting}
+\end{Code}
+
+\subsection{Оператор условного назначения сигнала WHEN}
+Это параллельный оператор, реализующий выбор одного из возможных вариантов в зависимости от некоторых управляющих сигналов. В общем виде его можно записать следующим образом:
+\begin{Code}
+\begin{lstlisting}
+ сигнал <= выражение_1     when условие_1     else 
+          выражение_2     when условие_2     else 
+          ...
+          выражение_(n-1) when условие_(n-1) else 
+          выражение_n;
+\end{lstlisting}
+\end{Code}
+<<<<<<< HEAD
+\textbf{\textit{Пример 1.}} Восьмибитовый мультиплексор 4-в-1.
+=======
+\exsect{Пример 1.} Восьмибитовый мультиплексор 4-в-1.
+>>>>>>> comb_elements_devel
+Рассмотрим комбинационную схему, описываемую таблицей истинности:
+
+% \begin{table}[h]
+{
+\centering
+\begin{tabular}{|c|c|}
+\hline
+input       & output \\ \hline
+s           & x      \\ \hline
+\texttt{00} & a      \\
+\texttt{01} & b      \\
+\texttt{10} & c      \\
+\texttt{11} & d      \\
+\hline
+\end{tabular}\par
+}
+% \end{table}
+
+VHDL код, реализующий эту схему такой:
+\begin{Code}
+<<<<<<< HEAD
+    \centering
+    \begin{lstlisting}
+    library ieee;
+    use ieee.std_logic_1164.all;
+
+    entity mux4 is
+        port(
+            a, b, c, d : in std_logic_vector(7 downto 0);
+            s : in  std_logic_vector(1 downto 0);
+            x : out std_logic_vector(7 downto 0)
+        );
+    end mux4;
+
+    architecture cond_arch of mux4 is
+    begin
+        x <= a when (s = "00") else
+             b when (s = "01") else
+             c when (s = "10") else
+             d;
+    end cond_arch;
+    \end{lstlisting}
+=======
+\begin{lstlisting}
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity mux4 is
+    port(
+        a, b, c, d : in std_logic_vector(7 downto 0);
+        s : in  std_logic_vector(1 downto 0);
+        x : out std_logic_vector(7 downto 0)
+    );
+end mux4;
+
+architecture cond_arch of mux4 is
+begin
+    x <= a when (s = "00") else
+         b when (s = "01") else
+         c when (s = "10") else
+         d;
+end cond_arch;
+\end{lstlisting}
+>>>>>>> comb_elements_devel
+\end{Code}
+
+Сигнал \lstinline?x? – это выходной информационный сигнал; \lstinline?a?, \lstinline?b?, \lstinline?c?, \lstinline?d? – входные информационные сигналы, а \lstinline?s? – это сигнал управления, на основании которого осуществляется выбор одного из вариантов. 
+Рассмотрим еще пару примеров.
+
+<<<<<<< HEAD
+
+
+\textbf{\textit{Пример 2.}} Бинарный дешифратор.
+
+% \begin{table}[h]
+{
+=======
+\exsect{Пример 2.} Бинарный дешифратор.
+\begin{table}[h]
+>>>>>>> comb_elements_devel
+\centering
+\begin{tabular}{|c|c|}
+\hline
+input       & output        \\ \hline
+s           & x             \\ \hline
+\texttt{00} & \texttt{0001} \\
+\texttt{01} & \texttt{0010} \\
+\texttt{10} & \texttt{0100} \\
+\texttt{11} & \texttt{1000} \\
+\hline
+\end{tabular}\par
+}
+% \end{table}
+
+\begin{Code}
+\begin{lstlisting}
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity decoder4 is
+    port(
+        s : in  std_logic_vector(1 downto 0);
+        x : out std_logic_vector(3 downto 0)
+    );
+end decoder4;
+
+architecture cond_arch of decoder4 is
+begin
+    x <= "0001" when (s = "00") else
+         "0010" when (s = "01") else
+         "0100" when (s = "10") else
+         "1000";
+end cond_arch;
+\end{lstlisting}
+\end{Code}
+
+<<<<<<< HEAD
+\textbf{\textit{Пример 3.}} Шифратор приоритета.
+
+% \begin{table}[h]
+{
+=======
+\exsect{Пример 3.} Шифратор приоритета.
+\begin{table}[h]
+>>>>>>> comb_elements_devel
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+input               & \multicolumn{2}{c|}{output} \\ \hline
+r                   & code        & active         \\ \hline
+\texttt{1{-}{-}{-}} & \texttt{11} & \texttt{1}     \\
+\texttt{01{-}{-}}   & \texttt{10} & \texttt{1}     \\
+\texttt{001-}       & \texttt{01} & \texttt{1}     \\
+\texttt{0001}       & \texttt{00} & \texttt{1}     \\
+\texttt{0000}       & \texttt{00} & \texttt{0}     \\
+\hline
+\end{tabular}\par
+}
+% \end{table}
+
+\begin{Code}
+\begin{lstlisting}
+library ieee;
+use ieee.std_logic_1164.all;
+
+entity prio_encoder42 is
+    port(
+        r      : in  std_logic_vector(3 downto 0);
+        code   : out std_logic_vector(1 downto 0);
+        active : out std_logic
+    );
+end prio_encoder42;
+
+architecture cond_arch of prio_encoder42 is
+begin
+    code <= "11" when (r(3) = '1') else
+            "10" when (r(2) = '1') else
+            "01" when (r(1) = '1') else
+            "00";
+    active <= r(3) or r(2) or r(1) or r(0);
+end cond_arch;
+\end{lstlisting}
+\end{Code}
+
+Здесь выходной сигнал \lstinline?code? определяет, на какой из линий \lstinline?r(i)? присутствует логическая единица. Причем линия \lstinline?r(3)? имеет \textbf{приоритет} – если на ней будет \lstinline?'1'?, то \lstinline?code = "11"? вне зависимости от других линий. 
+
+Поговорим о том, как реализуется оператор условного назначения сигнала в железе. Семантика оператора условного назначения сигнала подразумевает создание приоритетной схемы, т.е. условия, стоящие выше имеют больший приоритет. При синтезе этого оператора реализуются три схемы:
+\begin{itemize}
+\item схема, вычисляющая возможные значения выходного сигнала,
+\item схема, вычисляющая условия,
+\item схема определения приоритета.
+\end{itemize}
+Чтобы лучше разобраться, что такое схема приоритета введем понятие абстрактного мультиплексора 2-в-1.
+
+Здесь \texttt{i1}, \texttt{i2}, \texttt{o} – $n$-битные шины, а сигнал \texttt{sel} однобитный. В зависимости от него на выход \texttt{o} идет либо \texttt{i1}, либо \texttt{i0}.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+% inputs
+\node at (0,2) (input_i1) {\texttt{i1}};
+\node at (0,1) (input_i0) {\texttt{i0}};
+\node at (0,0) (input_sel) {\texttt{sel}};
+
+% mux
+\draw [-,fill=blue!20](1,0.5) -- (1.5,1) -- (1.5,2) -- (1,2.5) -- cycle;
+
+\node[right] at (1,2) (true) {\texttt{T}};
+\node[right] at (1,1) (false) {\texttt{F}};
+
+\path[->] (input_i1) edge node [font=\tiny] {/} node [above] {$n$} (true);
+\path[->] (input_i0) edge node [font=\tiny] {/} node [above] {$n$} (false);
+
+\node[right] at (2.5,1.5) (out) {\texttt{o}};
+\path[->] (1.5,1.5) edge node [font=\tiny] {/} node [above] {$n$} (out);
+
+\draw[->] (input_sel) -- (1.25,0) -- (1.25,0.75);
+\end{tikzpicture}
+\caption{Символ абстрактного мультиплексора 2-в-1.}
+\label{abstract_mux_2_1}
+\end{figure}
+
+Когда мы пишем на VHDL выражение:
+<<<<<<< HEAD
+=======
+
+>>>>>>> comb_elements_devel
+\begin{Code}
+\begin{lstlisting}
+signal_name <= value_expr_1 when boolean_expr_1 else 
+               value_expr_2;
+\end{lstlisting}
+\end{Code}
+
+реализуется следующая схема с мультиплексором:
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{expr} = [draw, fill=yellow!20, dotted, rectangle, minimum size=2em]
+
+% inputs
+\node[process] at (-1,2) (input_i1) {\texttt{value\_expr\_1}};
+\node[expr] at (-1,1) (input_i0) {\texttt{value\_expr\_2}};
+\node[expr] at (-1,0) (input_sel) {\texttt{boolean\_expr\_1}};
+
+% mux
+\draw [-,fill=blue!20](1,0.5) -- (1.5,1) -- (1.5,2) -- (1,2.5) -- cycle;
+
+\node[right] at (1,2) (true) {\texttt{T}};
+\node[right] at (1,1) (false) {\texttt{F}};
+
+\draw[->] (input_i1) -- (true);
+\draw[->] (input_i0) -- (false);
+
+\draw[->] (1.5,1.5) -- (2.5,1.5);
+\node[right] at (2.5,1.5) (true) {\texttt{sig}};
+
+\draw[->] (input_sel) -- (1.25,0) -- (1.25,0.75);
+\end{tikzpicture}
+\caption{Схема с мультиплексором 2-в-1.}
+\label{mux_fig_1}
+\end{figure}
+
+Каждый следующий уровень ветвления оператора условного назначения сигнала добавляет еще одну ступень в иерархию вместе с еще одним мультиплексором.
+<<<<<<< HEAD
+=======
+
+>>>>>>> comb_elements_devel
+\begin{Code}
+\begin{lstlisting}
+signal_name <= value_expr_1 when boolean_expr_1 else 
+               value_expr_2 when boolean_expr_2 else 
+               value_expr_3;
+\end{lstlisting}
+\end{Code}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{expr} = [draw, fill=yellow!20, dotted, rectangle, minimum size=2em]
+
+\begin{scope}
+    % inputs
+    \node[expr] at (-1,2) (input_i1) {\texttt{value\_expr\_1}};
+    \node[expr,fill=red!20] at (-1,1) (input_rem) {\texttt{remaining\_part}};
+    \node[expr] at (-1,0) (input_sel) {\texttt{boolean\_expr\_1}};
+
+    % mux
+    \draw [-,fill=blue!20](1,0.5) -- (1.5,1) -- (1.5,2) -- (1,2.5) -- cycle;
+
+    \node[right] at (1,2) (true) {\texttt{T}};
+    \node[right] at (1,1) (false) {\texttt{F}};
+    
+    \draw[->] (input_i1) -- (true);
+    \draw[->] (input_rem) -- (false);
+
+    \draw[->] (1.5,1.5) -- (2,1.5);
+    \node[right] at (2,1.5) (true) {\texttt{sig}};
+
+    \draw[->] (input_sel) -- (1.25,0) -- (1.25,0.75);
+\end{scope}
+
+\begin{scope}[xshift=7cm]
+    % inputs
+    \node[expr] at (-2.5,2) (input_i1) {\texttt{value\_expr\_1}};
+    \node[expr] at (-2.5,1) (input_i2) {\texttt{value\_expr\_2}};
+    \node[expr] at (-2.5,0) (input_i3) {\texttt{value\_expr\_3}};
+    \node[expr] at (-2.5,-1) (input_sel2) {\texttt{boolean\_expr\_2}};
+    \node[expr] at (-2.5,-2) (input_sel1) {\texttt{boolean\_expr\_1}};
+
+    % mux
+    \draw [-,fill=blue!20](1,0.5) -- (1.5,1) -- (1.5,2) -- (1,2.5) -- cycle;
+    \draw [-,fill=blue!20](-0.5,-0.5) -- (0,0) -- (0,1) -- (-0.5,1.5) -- cycle;
+
+    \node[right] at (1,2) (true1) {\texttt{T}};
+    \node[right] at (1,1) (false1) {\texttt{F}};
+    
+    \node[right] at (-0.5,1) (true2) {\texttt{T}};
+    \node[right] at (-0.5,0) (false2) {\texttt{F}};
+    
+    \draw[->] (input_i1) -- (true1);
+    
+    \draw[->] (0,0.5) -- (0.5,0.5) -- (0.5,1) -- (false1);
+    
+    \draw[->] (input_i2) -- (true2);
+    \draw[->] (input_i3) -- (false2);
+
+    \draw[->] (1.5,1.5) -- (2,1.5);
+    \node[right] at (2,1.5) (true1) {\texttt{sig}};
+
+    \draw[->] (input_sel2) -- (-0.25,-1) -- (-0.25,-0.25);
+    \draw[->] (input_sel1) -- (1.25,-2) -- (1.25,0.75);
+\end{scope}
+\end{tikzpicture}
+\caption{Схема с мультиплексорами 2-в-1.}
+\label{mux_fig_1}
+\end{figure}
+
+\subsection{Оператор выборочного назначения сигнала WITH ... SELECT}
+
+Это параллельный оператор, также реализующий выбор одного из возможных вариантов в зависимости от некоторых управляющих сигналов. Во многом он похож на оператор условного назначения, но есть и отличия. Записать в общем виде его можно так:
+<<<<<<< HEAD
+=======
+
+>>>>>>> comb_elements_devel
+\begin{Code}
+\begin{lstlisting}[mathescape]
+with задающее$\_$выражение select
+    сигнал <=
+        выражение_1 when выбор_1,
+        выражение_2 when выбор_2,
+        выражение_3 when выбор_3,
+        ...
+        выражение_$n$ when выбор_$n$;
+\end{lstlisting}
+\end{Code}
+
+Обратите внимание на использование \emph{запятых} после каждого выборочного значения (\lstinline[mathescape]?выбор_$i$?) и на точку с запятой в конце.
+
+Выборочные значения (\lstinline[mathescape]?выбор_$i$?) должны быть \textbf{взаимно исключающими} (значения не должны перекрываться или повторяться) и \textbf{полными} (все значения должны быть перечислены). Для обеспечения полноты выборочных значений рекомендуется использовать \lstinline?others?. Заметим, что выборочные значения~-- это именно значения, а не условия.
+
+Примеры из предыдущего параграфа можно переписать с использование оператора выборочного назначения сигнала.
+
+\exsect{Пример 1.} Мультиплексор 4-в-1.
+
+\begin{Code}
+\begin{lstlisting}
+architecture sel_arch of mux4 is
+begin
+    with s select
+        x <= a when "00",
+             b when "01",
+             c when "10",
+             d when others;
+end sel_arch;
+\end{lstlisting}
+\end{Code}
+
+\exsect{Пример 2.} Бинарный дешифратор.
+
+\begin{Code}
+\begin{lstlisting}
+architecture sel_arch of decoder4 is
+begin
+    with sel select
+        x <= "0001" when "00",
+             "0010" when "01",
+             "0100" when "10",
+             "1000" when others;
+end sel_arch;
+\end{lstlisting}
+\end{Code}
+
+\exsect{Пример 3.} Шифратор приоритета.
+
+\begin{Code}
+\begin{lstlisting}
+architecture sel_arch of prio_encoder42 is
+begin
+    with r select
+        code <= "11" when "1000" | "1001" | "1010" |
+                          "1011" | "1100" | "1101" |
+                          "1110" | "1111",
+                "10" when "0100" | "0101" | "0110" |
+                          "0111",
+                "01" when "0010" | "0011",
+                "00" when others;
+        active <= r(3) or r(2) or r(1) or r(0);
+end sel_arch;
+\end{lstlisting}
+\end{Code}
+
+В последнем примере вертикальной чертой \lstinline?"|"? идет компактное перечисление вариантов, которым соответствует один выходной код.
+
+При синтезе оператора выборочного назначения сигнала реализуется равноправный абстрактный мультиплексор $k$-в-1.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+% inputs
+\node (input_ik) at (0,3.5) {\texttt{ik}};
+\node (input_i1) at (0,2) {\texttt{i1}};
+\node (input_i0) at (0,1.5) {\texttt{i0}};
+\node (input_sel) at (0,0) {\texttt{sel}};
+
+% mux
+\draw [-,fill=blue!20](1,0.5) -- (2,1.5) -- (2,3.5) -- (1,4.5) -- cycle;
+
+\node[right] (ck) at (1,3.5) {\texttt{ck}};
+\node[right] (c1) at (1,2) {\texttt{c1}};
+\node[right] (c0) at (1,1.5) {\texttt{c0}};
+
+\path[->] (input_ik) edge node [font=\tiny] {/} node [above] {$n$} (ck);
+\path[->] (input_i1) edge node [font=\tiny] {/} node [above] {$n$} (c1);
+\path[->] (input_i0) edge node [font=\tiny] {/} node [above] {$n$} (c0);
+
+\draw[fill=black] (0.65,3.1) circle (1pt);
+\draw[fill=black] (0.65,2.85) circle (1pt);
+\draw[fill=black] (0.65,2.6) circle (1pt);
+
+\node[right] (out) at (3,2.5) {\texttt{o}};
+\path[->] (2,2.5) edge node [font=\tiny] {/} node [above] {$n$} (out);
+
+\draw[->] (input_sel) -- (1.5,0) -- (1.5,1);
+\end{tikzpicture}
+\caption{Абстрактный мультиплексор $k$-в-1.}
+\label{abstract_mux_k_1}
+\end{figure}
+
+В данной схеме \textbf{нет приоритета} при продвижении сигнала с входа на выход схемы. Также можно сказать, что схема получается симметричная с одинаковыми задержками на всех входных линиях.
+
+Проще всего сравнить операторы выборочного и условного назначения сигналов на примере мультиплексора 4-в-1.
+
+При использовании оператора условного назначения будет реализована следующая схема:
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{branch}=[fill,shape=circle,minimum size=3pt,inner sep=0pt]
+%
+%
+%
+%
+%
+%
+%
+%
+% TODO. Добавить картинку здесь.
+%
+%
+%
+%
+%
+%
+%
+%
+\end{tikzpicture}
+\caption{Оператор условного назначения.}
+\label{if_hard}
+\end{figure}
+
+Видно, что схема несимметричная, с различными задержками по входным сигналам. Но при этом сигнал \texttt{A} имеет приоритет над остальными.
+
+При использовании оператора выборочного назначения сигнала реализуется следующая схема:
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{branch}=[fill,shape=circle,minimum size=3pt,inner sep=0pt]
+%
+%
+%
+%
+%
+%
+%
+%
+% TODO. Добавить картинку здесь.
+%
+%
+%
+%
+%
+%
+%
+%
+\end{tikzpicture}
+\caption{Оператор выборочного назначения.}
+\label{case_hard}
+\end{figure}
+
+Здесь схема симметричная, задержки по входным сигналам приблизительно одинаковые. Все сигналы имеют одинаковый приоритет.
+
+У обеих схем \emph{логика работы} и \emph{таблицы истинности} \textbf{одинаковые}, при этом схемные реализации разные. При работе с языком VHDL вы всегда должны пытаться мыслить на уровне логических элементов и схем, чтобы получать эффективные реализации, ведь по сути VHDL – это не более чем удобный инструмент для описания таких объектов. 
+
+\section{Последовательное назначение сигналов в VHDL}
+
+В языке VHDL есть средство для описания последовательных алгоритмов с помощью, так называемых, \emph{последовательных операторов}. Эти операторы должны располагаться внутри специальной конструкции VHDL, называемой \textbf{оператор процесса}. Главной целью введения последовательных операторов в язык VHDL было описание абстрактного \emph{поведения} цифровых цепей (на более высоком уровне абстракции~-- \emph{поведенческом} (\emph{behavioural})). В отличие от операторов параллельного назначения сигналов, последовательные операторы не всегда имеют однозначное соответствие в железе. Часто даже они не могут быть синтезированы вовсе. Поэтому для описания схем с помощью процессов и последовательных операторов необходимо придерживаться четких шаблонов, которые однозначно синтезируются. Рассмотрением этих шаблонов мы и займемся. Пусть вас не пугает слово "<шаблон">: несмотря на то, что определенные компоненты должны описываться по четкой схеме, у вас останется огромное пространство для творчества при определении взаимодействия этих компонентов. 
+
+\subsection{Оператор процесса PROCESS}
+
+Оператор процесса имеет следующий синтаксис:
+
+\begin{Code}
+\begin{lstlisting}[mathescape]
+process ( список$\_$чувствительности )
+    объявления;
+begin
+    последовательные$\_$операторы;
+    последовательные$\_$операторы;
+    ...
+end process;
+\end{lstlisting}
+\end{Code}
+
+В подразделе объявлений оператора процесса могут быть объявлены подпрограммы, типы, подтипы, константы, переменные (только в подразделе объявлений оператора процесса), атрибуты, файлы и др. Сигналы в подразделе объявлений оператора процесса объявлены быть \textbf{не могут}.
+
+Сам оператор процесса является \textbf{параллельным оператором}. Если в архитектурном теле разместить несколько процессов, то они будут выполняться параллельно. Но внутри каждого процесса находятся операторы, выполняемые последовательно, т.е. один за другим. Список чувствительности – это список запускающих процесс сигналов. Когда один из сигналов, указанных в списке чувствительности, меняет свое значение, процесс запускается, и последовательные операторы выполняются до конца процесса. После этого процесс приостанавливает свою работу до тех пор, пока опять какой-нибудь сигнал из списка чувствительности не изменит свое значение. Таким образом, процесс может находиться в одном из двух состояний: запущенном и приостановленном. \textbf{Для комбинационной схемы \emph{все входы} должны быть в списке чувствительности.} 
+
+\begin{Code}
+\begin{lstlisting}
+signal a, b, c, y: std_logic;
+...
+process (a, b, c) -- правильно
+begin
+    y <= a and b or c;
+end process;
+...
+process (a)       -- неправильно
+begin
+    y <= a and b or c;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Внутри процесса сигналу можно присвоить значение несколько раз. При этом значение сигнала не изменится до выхода из процесса, а после выхода станет равным последнему присвоенному значению. Получается, что следующие записи просто эквивалентны.
+
+\begin{Code}
+\begin{lstlisting}
+process (a, b, c, d)
+begin
+    y <= a or c;
+    y <= a and b;
+    y <= c and d;
+end process;
+\end{lstlisting}
+\end{Code}
+
+\begin{Code}
+\begin{lstlisting}
+process (a, b, c, d)
+begin
+    y <= c and d;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Очень важно понимать, что последнее значение присваивается сигналу не сразу, а в конце процесса. Промежуточные значения сигнала не доступны. В этом отличие сигнала от \emph{переменной}.
+
+\begin{Code}
+\begin{lstlisting}
+architecture arch of main is
+    signal y : std_logic;
+begin
+    process (a, b, c, d)
+    begin
+        y <= a or c;
+        -- Здесь, после оператора присвоения, сигнал y 
+        -- не равен a or c.
+        -- Здесь могут идти последовательные операторы, 
+        -- которые не используют промежуточное значение
+        -- сигнала y.
+        z <= y;
+        -- Здесь сигналу z не присваивается значение  
+        -- a or c, ему присваивается значение c and d.
+        y <= a and b;
+        y <= c and d;
+    end process;
+    -- Зато здесь, вне тела процесса, y всегда равен c and d
+end arch;
+\end{lstlisting}
+\end{Code}
+
+\exsect{Замечание.} Синтезатор XST достаточно умный, чтобы не реализовать в этом конкретном простом примере схему с памятью (ведь сигнала y нет в списке чувствительности процесса), но на синтезатор рекомендуется полагаться не всегда.
+
+На самом деле, с оператором процесса вы уже сталкивались.
+
+\exsect{Вопрос.} Где?
+
+\exsect{Ответ.} Правильно, при описании testbench. Там был процесс stim\_proc, задающий значения входных сигналов для тестируемой схемы.
+
+\exsect{Вопрос} Чего не было в процессе stim\_proc?
+
+\exsect{Ответ.} Там не было списка чувствительности. Но зато там были операторы \lstinline?wait?.
+
+\subsection{Оператор ожидания WAIT}
+
+Процесс с операторами ожидания имеет один или более операторов wait, но не имеет списка чувствительности. Оператор \lstinline?wait? имеет в общем случае следующий вид:
+
+\begin{Code}
+\begin{lstlisting}[mathescape]
+wait on список$\_$чувствительности until условие for тайм$\_$аут;
+\end{lstlisting}
+\end{Code}
+
+Оператор \lstinline?wait? является причиной временного прекращения оператора процесса или процедуры. Оператор ожидания \lstinline?wait? приостанавливает процесс до момента, пока не изменится некоторый сигнал в списке чувствительности оператора \lstinline?wait?, в этот момент будет произведено вычисление условия. Фраза "<условие">~-– есть выражение типа \lstinline?boolean?. Фраза "<тайм-аут"> – есть выражение типа \lstinline?time?, оно устанавливает максимальное время ожидания, после которого процесс возобновит свое выполнение.
+
+\exsect{Пример.}
+
+\begin{Code}
+\begin{lstlisting}
+wait on a, b until (c = 0) for 50 ns;
+\end{lstlisting}
+\end{Code}
+
+Этот оператор приостановит процесс до момента изменения сигнала \lstinline?a? или сигнала \lstinline?b?, после чего будет проверено выражение \lstinline?c = 0?, и если результатом проверки будет истина, процесс возобновится. Но независимо от этих условий возобновление процесса произойдет через \lstinline?50 ns?.
+
+Допустимо записывать одно или более условий в операторе ожидания \lstinline?wait?, например:
+
+\begin{Code}
+\begin{lstlisting}
+wait on a, b;       -- Процесс возобновится, когда изменится a или b.
+
+wait until (c = 0); -- Процесс возобновится, когда c изменит свое 
+                    -- значение из 1 в 0.
+wait for 50 ns;     -- Процесс возобновится через 50 нс.
+
+wait;               -- Процесс больше не возобновится, если не 
+                    -- поместить такой оператор в конце процесса, 
+                    -- то выполнение процесса начнется сначала. 
+                    -- Такой оператор можно использовать в конце 
+                    -- testbench для окончания симуляции.
+\end{lstlisting}
+\end{Code}
+
+В процессе допускается использование нескольких операторов \lstinline?wait?.
+
+\exsect{ВАЖНО!} Только несколько четко определенных конструкций с операторами ожидания \lstinline?wait? могут быть синтезированы в железе. В документации к синтезатору XST допускается применение оператора \lstinline?wait? в последовательных схемах (не комбинационных, о них вы узнаете в следующей лекции), при этом допускается только конструкция \lstinline?wait until?, причем она должна быть единственной в процессе, и у процесса не должно быть списка чувствительности.
+
+\textbf{Настоятельно рекомендуется использовать конструкции с оператором ожидания только для \emph{СИМУЛЯЦИИ}.}
+
+\subsection{Переменные в VHDL}
+
+Наряду с сигналами и константами в языке VHDL есть еще один программный элемент данных – переменная. Локальные переменные могут быть объявлены только в подразделе объявлений оператора процесса \lstinline?process? и подпрограмм (функций и процедур). Объявление переменной имеет следующий синтаксис:
+
+\begin{Code}
+\begin{lstlisting}[mathescape]
+variable имя$\_$переменной : тип [ := начальное$\_$значение ];
+\end{lstlisting}
+\end{Code}
+
+Выражение в квадратных скобках может быть опущено.
+
+В каждый момент времени переменная может иметь любое, но всегда \textbf{единственное} значение. В другой момент времени переменная может иметь другое значение. Значение переменной может быть модифицировано оператором присваивания значения переменной. Этот оператор имеет следующий синтаксис:
+
+\begin{Code}
+\begin{lstlisting}[mathescape]
+ имя$\_$переменной := выражение;
+\end{lstlisting}
+\end{Code}
+
+При этом считается, что значение переменной модифицируется оператором присваивания значения \textbf{немедленно} (т.е. без временной задержки), как только этот оператор выполнен. Поведение оператора присвоения значения переменной в VHDL похоже на поведение оператора присвоения значения переменной в обычном традиционном языке программирования (C, C++, Pascal и др.). Этим отличаются присваивания значения сигналам и переменным.
+
+\exsect{Пример.}
+
+\begin{Code}
+\begin{lstlisting}
+signal a, b, y : std_logic;
+...
+process (a, b)
+    variable tmp : std_logic;
+begin
+    tmp := '0';
+    tmp := tmp or a;
+    tmp := tmp or b;
+    y <= tmp;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Переменная \lstinline?tmp? получает значение немедленно в каждом последовательном выражении, содержащем оператор присвоения значения переменной (\lstinline?:=?). И затем значение переменной (равное \lstinline?'0' or a or b? $\Leftrightarrow$ \lstinline?a or b?) присваивается сигналу \lstinline?y?.
+
+В железе такой код может быть реализован следующим образом.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{branch}=[fill,shape=circle,minimum size=3pt,inner sep=0pt]
+% gates
+\node[or gate US, draw, logic gate inputs=nn] (Or1) at (2.5,0.5) {};
+\node[or gate US, draw, logic gate inputs=nn] (Or2) at (5,0) {};
+
+% inputs
+\node (i0) at (0,1) {\texttt{'0'}};
+\path let \p1 = (Or1.input 2) in node (ia) at (0,\y1) {\texttt{a}};
+\path let \p2 = (Or2.input 2) in node (ib) at (0,\y2) {\texttt{b}};
+
+% outputs
+\node (oy) at (7.5,0) {\texttt{y}};
+
+% connections
+\path[-] (i0) edge node [above] {\texttt{tmp0}} (2,1);
+\draw (2,1) |- (Or1.input 1);
+\draw (ia) |- (Or1.input 2);
+
+\path[-] (Or1.output) edge node [above] {\texttt{tmp1}} (4,0.5);
+\draw (4,0.5) |- (Or2.input 1);
+
+\draw (ib) |- (Or2.input 2);
+\path[-] (Or2.output) edge node [above] {\texttt{tmp2}} (oy);
+\end{tikzpicture}
+\caption{Реализация в железе кода с переменными.}
+\label{hardware_var_0}
+\end{figure}
+
+Для реализации предыдущего процесса в железе нам потребовалось ввести новые переменные \lstinline?tmp0?, \lstinline?tmp1?, и \lstinline?tmp2?.
+
+Для сравнения повторим предыдущий фрагмент кода, заменив переменные сигналами.
+
+\begin{Code}
+\begin{lstlisting}
+signal a, b, y, tmp : std_logic;
+...
+process (a, b, tmp)
+begin
+    tmp <= '0';
+    tmp <= tmp or a;
+    tmp <= tmp or b;
+    y   <= tmp;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Заметим, что сигналы должны быть "<глобальными"> и должны быть объявлены вне процесса, и сигнал tmp должен быть включен в список чувствительности процесса. Этот фрагмент кода эквивалентен следующему.
+
+\begin{Code}
+\begin{lstlisting}
+signal a, b, y, tmp : std_logic;
+...
+process (a, b, tmp)
+begin
+    tmp <= tmp or b;
+    y <= tmp;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Здесь мы имеем дело с комбинационной петлей и элементом ИЛИ, как показано на следующем рисунке.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=latex']
+\tikzstyle{branch}=[fill,shape=circle,minimum size=3pt,inner sep=0pt]
+%
+%
+%
+%
+%
+%
+%
+%
+% TODO. Добавить картинку здесь.
+%
+%
+%
+%
+%
+%
+%
+%
+\end{tikzpicture}
+\caption{Комбинационная петля.}
+\label{comb_loop}
+\end{figure}
+
+Заметим, что переменные локальны для процесса, в котором они объявлены, и они не видны вне этого процесса.
+
+Прежде, чем использовать переменную, необходимо задать себе вопрос, действительно ли она нужна. Неправильное использование переменных очень непросто найти и исправить. В большинстве случаев аналогичный код можно написать без использования переменных.
+
+\subsection{Оператор IF}
+Оператор \lstinline?if?~-- это один из последовательных операторов, поэтому его можно использовать только внутри оператора процесса. Синтаксис оператора \lstinline?if? следующий:
+
+\begin{Code}
+\begin{lstlisting}[mathescape]
+if условие_1 then
+    последовательные$\_$операторы;
+elsif условие_2 then
+    последовательные$\_$операторы;
+elsif условие_3 then
+    последовательные$\_$операторы;
+...
+else
+    последовательные$\_$операторы;
+end if;
+\end{lstlisting}
+\end{Code}
+
+Обратите внимание на написание ключевого слова \lstinline?elsif? и на то, что \lstinline?end if? пишется раздельно.
+
+Рассмотрим его применение на примерах из предыдущего раздела.
+
+\exsect{Пример 1.} Мультиплексор 4-в-1.
+
+\begin{Code}
+\begin{lstlisting}
+architecture if_arch of mux4 is
+begin
+    process (a, b, c, d, s)
+    begin
+        if (s = "00") then
+            x <= a;
+        elsif (s = "01") then
+            x <= b;
+        elsif (s = "10") then
+            x <= c;
+        else
+            x <= d;
+        end if;
+    end process;
+end if_arch;
+\end{lstlisting}
+\end{Code}
+
+\exsect{Пример 2.} Бинарный дешифратор.
+
+\begin{Code}
+\begin{lstlisting}
+architecture if_arch of decoder4 is
+begin
+    process (s)
+    begin
+        if (s = "00") then
+            x <= "0001";
+        elsif (s = "01") then
+            x <= "0010";
+        elsif (s = "10") then
+            x <= "0100";
+        else
+            x <= "1000";
+        end if;
+    end process;
+end if_arch;
+\end{lstlisting}
+\end{Code}
+
+\exsect{Пример 3.} Шифратор приоритета.
+
+\begin{Code}
+\begin{lstlisting}
+architecture if_arch of prio_encoder42 is
+begin
+    process (r)
+    begin
+        if (r(3) = '1') then
+            code <= "11";
+        elsif (r(2) = '1') then
+            code <= "10";
+        elsif (r(1) = '1') then
+            code <= "01";
+        else
+            code <= "00";
+        end if;
+    end process;
+    active <= r(3) or r(2) or r(1) or r(0);
+end if_arch;
+\end{lstlisting}
+\end{Code}
+
+Сравним оператор \lstinline?if? с оператором условного назначения сигналов. Для простых случаев эти операторы просто эквивалентны.
+
+\begin{Code}
+\begin{lstlisting}
+ сигнал <= выражение_1 when условие_1 else 
+          выражение_2 when условие_2 else 
+          ...
+          выражение_n;
+\end{lstlisting}
+\end{Code}
+
+эквивалентно:
+
+\begin{Code}
+\begin{lstlisting}
+process(...)
+begin
+    if условие_1 then
+        сигнал <= выражение_1;
+    elsif условие_2 then
+        сигнал <= выражение_2;
+    ...
+    else
+        сигнал <= выражение_n;
+    end if;
+end process; 
+\end{lstlisting}
+\end{Code}
+
+Отличия:
+
+\begin{itemize}
+\item По структуре: внутри \lstinline?if? может быть еще один \lstinline?if?.
+\item По пониманию: легче понять смысл.
+\item В одной ветке можно назначить несколько сигналов.
+\end{itemize}
+
+\subsubsection{Проблема неполного дерева условий оператора IF}
+
+В VHDL только одна ветка \lstinline?then? обязательна. Остальные ветки (\lstinline?elsif?, \lstinline?else?) могут быть опущены. Здесь надо быть аккуратными. Например, рассмотрим компаратор двух чисел, выход которого равен \lstinline?'1'?, когда они равны.
+
+\begin{Code}
+\begin{lstlisting}
+process(a, b)
+begin
+    if (a = b) then
+        eq <= '1';
+    end if;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Этот код синтаксически верен, но приводит к неверной реализации. Так как здесь нет ветки \lstinline?else?, то, когда числа не равны, не производится никакого действия. Семантика VHDL такова, что в этом случае значение сигнала \lstinline?eq? не обновляется, и он сохраняет свое значение. Это эквивалентно следующей записи:
+
+\begin{Code}
+\begin{lstlisting}
+process(a, b)
+begin
+    if (a = b) then
+        eq <= '1';
+    else
+        eq <= eq;
+    end if;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Этот код описывает схему с обратной связью, что приводит к образованию элемента памяти или внутреннему состоянию (обычно так называемых \emph{защелок} (\emph{latch})). Очевидно, что мы не это имели в виду. Код необходимо переписать следующим образом:
+
+\begin{Code}
+\begin{lstlisting}
+process(a, b)
+begin
+    if (a = b) then
+        eq <= '1';
+    else
+        eq <= '0';
+    end if;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Для описания комбинационной цепи необходимо всегда включать ветку \lstinline?else?, чтобы избежать образования элемента памяти. 
+
+\subsubsection{Проблема неполного назначения сигналов в операторе IF}
+
+В общем случае оператор \lstinline?if? имеет несколько веток. Возможно, что сигналу присваивается значение не во всех этих ветках. Хотя синтаксически правильно, это приводит к образованию элемента памяти в схеме (защелок). Пример компаратора двух чисел с тремя выходами: \lstinline?gt? (greater than, $a > b$), \lstinline?lt? (less than, $a < b$), \lstinline?eq? (equal, $a = b$).
+
+\begin{Code}
+\begin{lstlisting}
+process(a, b)
+begin
+    if (a > b) then
+        gt <= '1';
+    elsif (a = b) then
+        eq <= '1';
+    else
+        lt <= '1';
+    end if;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Опять же семантика VHDL подразумевает, что если сигналу не назначается значение, он его сохраняет. А это приводит к ненужному здесь образованию элемента памяти. Код следует исправить:
+
+\begin{Code}
+\begin{lstlisting}
+process(a, b)
+begin
+    gt <= '0';
+    eq <= '0';
+    lt <= '0';
+    if (a > b) then
+        gt <= '1';
+    elsif (a = b) then
+        eq <= '1';
+    else
+        lt <= '1';
+    end if;
+end process;
+\end{lstlisting}
+\end{Code}
+
+или:
+
+\begin{Code}
+\begin{lstlisting}
+process(a, b)
+begin
+    if (a > b) then
+        gt <= '1';
+        eq <= '0';
+        lt <= '0';
+    elsif (a = b) then
+        gt <= '0';
+        eq <= '1';
+        lt <= '0';
+    else
+        gt <= '0';
+        eq <= '0';
+        lt <= '1';
+    end if;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Первый вариант кода более красив и реализует прием программирования на VHDL, называемый присвоение значения комбинационному сигналу \emph{по умолчанию}. Здесь надо вспомнить, что при назначении сигнала в процессе, сигнал принимает последнее присвоенное значение. Рекомендуется использовать именно такой стиль программирования.
+
+\subsection{Оператор CASE}
+
+Оператор \lstinline?case? также является последовательным оператором, и его использование разрешено только внутри оператора процесса. Оператор \lstinline?case? имеет следующий синтаксис:
+
+\begin{Code}
+\begin{lstlisting}[mathescape]
+case задающее$\_$выражение is
+when выбор_1 =>
+        последовательные$\_$операторы;
+when выбор_2 =>
+        последовательные$\_$операторы;
+        ...
+when выбор_n =>
+        последовательные$\_$операторы;
+end case;
+\end{lstlisting}
+\end{Code}
+
+Выборочные значения \lstinline?выбор_i? должны быть полными и взаимоисключающими – как в операторе выборочного назначения сигнала (\lstinline?select?). Для обеспечения полноты выборочных значений рекомендуется использовать \lstinline?others?. Для компактного перечисления вариантов, которым соответствует один выходной код, можно использовать вертикальную черту \lstinline?"|"?. Рассмотрим на примерах.
+
+\exsect{Пример 1.} Мультиплексор 4-в-1.
+
+\begin{Code}
+\begin{lstlisting}
+architecture case_arch of mux4 is
+begin
+    process (a, b, c, d, s)
+    begin
+        case s is
+            when "00" => x <= a;
+            when "01" => x <= b;
+            when "10" => x <= c;
+            when others => x <= d;
+        end case;
+    end process;
+end case_arch;
+\end{lstlisting}
+\end{Code}
+
+\exsect{Пример 2.} Бинарный дешифратор.
+
+\begin{Code}
+\begin{lstlisting}
+architecture case_arch of decoder4 is
+begin
+proc1: process (s)
+    begin
+        case s is
+            when "00" => 
+                x <= "0001";
+            when "01" => 
+                x <= "0010";
+            when "10" => 
+                x <= "0100";
+            when others => 
+                x <= "1000";
+        end case;
+    end process proc1;
+end case_arch;
+\end{lstlisting}
+\end{Code}
+
+Здесь \lstinline?proc1?~-- так называемая метка процесса. Язык VHDL допускает процессы без меток.
+
+\exsect{Пример 3.} Шифратор приоритета.
+
+\begin{Code}
+\begin{lstlisting}
+architecture case_arch of prio_encoder42 is
+begin
+process (r)
+    begin
+        case r is
+            when "1000" | "1001" | "1010" | "1011" | 
+                 "1100" | "1101" | "1110" | "1111" => 
+                code <= "11";
+            when "0100" | "0101" | "0110" | "0111" => 
+                code <= "10";
+            when "0010" | "0011" => 
+                code <= "01";
+            when others => 
+                code <= "00";
+        end case;
+    end process;
+    active <= r(3) or r(2) or r(1) or r(0);
+end case_arch;
+\end{lstlisting}
+\end{Code}
+
+В простых случаях оператор \lstinline?case? эквивалентен оператору выборочного назначения сигнала (\lstinline?select?):
+
+\begin{Code}
+\begin{lstlisting}[mathescape]
+with задающее$\_$выражение select
+    сигнал <=
+        выражение_1 when выбор_1,
+        выражение_2 when выбор_2,
+        ...
+        выражение_n when выбор_n;
+\end{lstlisting}
+\end{Code}
+
+эквивалентно:
+
+\begin{Code}
+\begin{lstlisting}[mathescape]
+process(...)
+begin
+    case задающее$\_$выражение is
+        when выбор_1 =>
+            сигнал <= выражение_1;
+        when выбор_2 =>
+            сигнал <= выражение_2;
+            ...
+        when выбор_n =>
+            сигнал <= выражение_n;
+    end case;
+end process;
+\end{lstlisting}
+\end{Code}
+
+\subsubsection{Проблема неполного назначения сигналов в операторе CASE}
+
+Рассмотрим простой шифратор приоритета.
+
+\begin{Code}
+\begin{lstlisting}
+process(a)
+begin
+    case a is
+        when "100" | "101" | "110" | "111" =>
+            high <= '1';
+        when "010" | "011" =>
+            middle <= '1';
+        when others =>
+            low <= '1';
+    end case;
+end process;
+\end{lstlisting}
+\end{Code}
+
+Подразумевается, что в один момент времени только один из сигналов \lstinline?high?, \lstinline?middle? и \lstinline?low? будет равен \lstinline?'1'?. Однако при реализации схемы опять возникнет ненужный элемент памяти, так как не все сигналы назначаются за один "<пробег"> процесса. Решается эта проблема опять же присвоением значений сигналам по умолчанию.
+
+\exsect{Упражнение.} Попробуйте написать соответствующий код самостоятельно и сравните с ответом.
+
+\exsect{Ответ.}
+
+\begin{Code}
+\begin{lstlisting}
+process(a)
+begin
+    high   <= '0';
+    middle <= '0';
+    low    <= '0';
+    case a is
+        when "100" | "101" | "110" | "111" =>
+            high <= '1';
+        when "010" | "011" =>
+            middle <= '1';
+        when others =>
+            low <= '1';
+    end case;
+end process;
+\end{lstlisting}
+\end{Code}
+
+\section{Правила описания комбинационных схем}
+Перечислим правила, которых вы \textbf{должны} придерживаться при описании комбинационных схем с использованием оператора процесса и последовательных операторов:
+\begin{itemize}
+\item Все входные сигналы должны быть в списке чувствительности процесса.
+\item Дерево условий оператора \lstinline?if? должно быть \textbf{полным}. Используйте \lstinline?else?.
+\item Выборочные значения в операторе \lstinline?case? должны быть \textbf{полными и взаимоисключающими}. Используйте \lstinline?others?.
+\item При выходе из процесса всем выходным сигналам необходимо присвоить значение (например, значение по умолчанию в начале процесса).
+\end{itemize}
+
+\section{Практика}
+\subsection{Коммутатор-переключатель 2-на-2}
+У коммутатора 2-на-2 есть два входа: \lstinline?x0? и \lstinline?x1? – и два выхода: \lstinline?y0? и \lstinline?y1?, а также вход управления \lstinline?ctrl?. В зависимости от значения сигнала \lstinline?ctrl? входные данные по-разному направляются на выходы.
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|l|}
+\hline
+input       & \multicolumn{2}{c|}{output} & function     \\ \hline
+ctrl        & y1 & y0                    &              \\ \hline
+\texttt{00} & x1 & x0                    & pass         \\
+\texttt{01} & x0 & x1                    & cross        \\
+\texttt{10} & x0 & x0                    & broadcast x0 \\
+\texttt{11} & x1 & x1                    & broadcast x1 \\
+\hline
+\end{tabular}
+\end{table}
+
+\exsect{Упражнение.} Реализуйте схему переключателя на VHDL с использованием параллельных и последовательных операторов.
+
+\subsection{Генератор следующего элемента последовательности Грея}
+Код Грея~-- система счисления, в которой два соседних значения различаются только в одном разряде.
+
+Изначально код Грея предназначался для защиты от ложного срабатывания электромеханических переключателей. Сегодня коды Грея широко используются для упрощения выявления и исправления ошибок в системах связи, а также в формировании сигналов обратной связи в системах управления. Коды Грея часто используются в датчиках-\emph{энкодерах} (датчиках угла поворота). Их использование удобно тем, что два соседних значения шкалы сигнала отличаются только в одном разряде. Также они используются для кодирования номера дорожек в жёстких дисках.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+2-битный код Грея & 3-битный код Грея & 4-битный код Грея \\ \hline
+\texttt{00}       & \texttt{000}      & \texttt{0000}     \\
+\texttt{01}       & \texttt{001}      & \texttt{0001}     \\
+\texttt{11}       & \texttt{011}      & \texttt{0011}     \\
+\texttt{10}       & \texttt{010}      & \texttt{0010}     \\
+                  & \texttt{110}      & \texttt{0110}     \\
+                  & \texttt{111}      & \texttt{0111}     \\
+                  & \texttt{101}      & \texttt{0101}     \\
+                  & \texttt{100}      & \texttt{0100}     \\
+                  &                   & \texttt{1100}     \\
+                  &                   & \texttt{1101}     \\
+                  &                   & \texttt{1111}     \\
+                  &                   & \texttt{1110}     \\
+                  &                   & \texttt{1010}     \\
+                  &                   & \texttt{1011}     \\
+                  &                   & \texttt{1001}     \\
+                  &                   & \texttt{1000}     \\
+\hline
+\end{tabular}
+\end{table}
+
+Задача состоит в написании комбинационного модуля, генерирующего следующий элемент последовательности Грея, если на вход подан текущий элемент.
+
+Самым простым и очевидным способом реализации модуля является простое задание таблицы соответствия с помощью операторов выборочного назначения сигналов.
+
+\begin{Code}
+\begin{lstlisting}
+entity g_inc is
+    port (
+        g: in std_logic_vector(3 downto 0);
+        g_next: out std_logic_vector(3 downto 0)
+    );
+end g_inc;
+
+architecture table_arch of g_inc is
+begin
+    with g select
+        g_next <= "0001" when "0000",
+                  "0011" when "0001",
+                  "0010" when "0011",
+                  "0110" when "0010",
+                  "0111" when "0110",
+                  "0101" when "0111",
+                  "0100" when "0101",
+                  "1100" when "0100",
+                  "1101" when "1100",
+                  "1111" when "1101",
+                  "1110" when "1111",
+                  "1010" when "1110",
+                  "1011" when "1010",
+                  "1001" when "1011",
+                  "1000" when "1001",
+                  "0000" when others; -- "1000"
+end table_arch;
+\end{lstlisting}
+\end{Code}
+
+Подобный код не обладает свойством \emph{масштабируемости}. Он пригоден только для 4-битной шины. К сожалению, не существует простого алгоритма вычисления следующего элемента последовательности Грея непосредственно из предыдущего. Однако существуют несложные алгоритмы перевода кода Грея в двоичный код и обратно. Один из возможных подходов включает три этапа.
+
+\begin{enumerate}
+\item Преобразование кода Грея в соответствующий двоичный код.
+\item Увеличение на единицу двоичного кода с использованием обычного сумматора.
+\item Преобразование двоичного кода обратно в код Грея.
+\end{enumerate}
+
+\subsubsection{Преобразование двоичный код $\rightarrow$ код Грея}
+Обозначим: $g$~-- число в представлении Грея, $b$~-- число в двоичном представлении, нижним индексом будем обозначать номер бита в представлении. Посмотрим внимательно на таблицу соответствия двоичных кодов и кодов Грея.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+Двоичный код  & Код Грея      \\ \hline
+\texttt{0000} & \texttt{0000} \\
+\texttt{0001} & \texttt{0001} \\
+\texttt{0010} & \texttt{0011} \\
+\texttt{0011} & \texttt{0010} \\
+\texttt{0100} & \texttt{0110} \\
+\texttt{0101} & \texttt{0111} \\
+\texttt{0110} & \texttt{0101} \\
+\texttt{0111} & \texttt{0100} \\
+\texttt{1000} & \texttt{1100} \\
+\texttt{1001} & \texttt{1101} \\
+\texttt{1010} & \texttt{1111} \\
+\texttt{1011} & \texttt{1110} \\
+\texttt{1100} & \texttt{1010} \\
+\texttt{1101} & \texttt{1011} \\
+\texttt{1110} & \texttt{1001} \\
+\texttt{1111} & \texttt{1000} \\
+\hline
+\end{tabular}
+\end{table}
+ 
+Заметим, что $i$-й бит в представлении Грея (т.е. $g_i$) равен \texttt{'1'}, если $i$-й и $(i+1)$-й биты в соответствующем двоичном представлении (т.е. $b_i$ и $b_{i+1}$) различны, а старший бит всегда одинаков у обоих представлений. (Помним, что самый левый старший бит (Most Significant Bit, MSB) имеет самый большой номер, а самый правый младший бит (Least Significant Bit, LSB) имеет номер 0, т.е. нумерация ведется справа налево.) Для примера рассмотрим пятую строчку приведенной выше таблицы:
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+Двоичный код     & Код Грея         \\ \hline
+\texttt{0100}    & \texttt{0110}    \\ \hline
+\texttt{0\_\_\_} & \texttt{0\_\_\_} \\
+\texttt{01\_\_}  & \texttt{\_1\_\_} \\
+\texttt{\_10\_}  & \texttt{\_\_1\_} \\
+\texttt{\_\_00}  & \texttt{\_\_\_0} \\
+\hline
+\end{tabular}
+\end{table}
+
+Это наблюдение запишем в виде логического уравнения с использованием оператора \emph{"<Исключающее ИЛИ">} или XOR:
+\[
+g_i = b_i \oplus b_{i+1}
+\]
+
+При этом для старшего бита следует вместо $b_{i+1}$  подставить \texttt{'0'}. Для 4-битного кода, таким образом, можно записать:
+\[ \begin{aligned}
+g_3 &= b_3 \oplus '0' = b_3 \\
+g_2 &= b_2 \oplus b_3       \\
+g_1 &= b_1 \oplus b_2       \\
+g_0 &= b_0 \oplus b_1       \\
+\end{aligned} \]
+
+\subsubsection{Преобразование код Грея $\rightarrow$ двоичный код}
+
+Заметим, что если $a \oplus b = c$, то $a = c \oplus b$.
+
+\exsect{Упражнение.} Проверьте это утверждение, построив таблицу истинности.
+
+Тогда из уравнения $g_i = b_i \oplus b_{i+1}$ следует, что
+\[
+b_i = g_i \oplus b_{i+1}
+\]
+
+Таким образом получена рекурсивная формула. Раскроем ее для случая 4-битных кодов.
+\[ \begin{aligned}
+b_3 &= g_3 \oplus '0' = g_3                                     \\
+b_2 &= g_2 \oplus b_3 = g_2 \oplus g_3                          \\
+b_1 &= g_1 \oplus b_2 = g_1 \oplus g_2 \oplus g_3               \\
+b_0 &= g_0 \oplus b_1 = g_0 \oplus g_1 \oplus g_2 \oplus g_3    \\
+\end{aligned} \]
+
+\subsubsection{Реализация на VHDL}
+\begin{Code}
+\begin{lstlisting}
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.std_logic_unsigned.all;
+
+entity g_inc is
+    generic (
+        WIDTH: natural := 4
+    );
+    port ( 
+        g : in std_logic_vector (WIDTH-1 downto 0);
+        g_next : out std_logic_vector (WIDTH-1 downto 0)
+    );
+end g_inc;
+
+architecture compact_arch of g_inc is
+    signal b, b_next: std_logic_vector(WIDTH-1 downto 0);
+begin
+    -- Gray to binary
+    b <= g xor ('0' & b(WIDTH-1 downto 1));
+    -- binary increment
+    b_next <= b + 1;
+    -- binary to Gray
+    g_next <= b_next xor ('0' & b_next(WIDTH-1 downto 1));
+end compact_arch;
+\end{lstlisting}
+\end{Code}
+
+\exsect{Упражнение.} Реализовать конвертер-генератор кода Грея. Входные сигналы: \lstinline?x?, \lstinline?s?. Сигнал \lstinline?x? имеет тип \lstinline?std_logic_vector(WIDTH-1 downto 0)?, а сигнал \lstinline?s? имеет тип \lstinline?std_logic_vector(1 downto 0)?.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+input         & output                                                                                          \\ \hline
+\lstinline?s? & \lstinline?y?                                                                                   \\ \hline
+\texttt{00}   & \lstinline?y?~-- двоичное представление \lstinline?x?, \lstinline?x? записан в коде Грея        \\
+\texttt{01}   & \lstinline?y?~-- представление \lstinline?x? в коде Грея, \lstinline?x? записан в двоичном коде \\
+\texttt{10}   & \lstinline?y?~-- следующий элемент последовательности Грея, \lstinline?x?~-- текущий элемент    \\
+\texttt{11}   & \lstinline?y?~-- предыдущий элемент последовательности Грея, \lstinline?x?~-- текущий элемент   \\
+\hline
+\end{tabular}
+\end{table}
+
+Использовать оператор процесса и последовательные операторы.
+
+\section{Контрольные вопросы и задания}
+
+\exsect{Теория}
+\begin{enumerate}
+\item Операторы условного и выборочного назначения сигналов в VHDL.
+\item Оператор процесса и последовательные операторы (IF, CASE).
+\item Оператор WAIT.
+\item Правила описания комбинационных схем на VHDL.
+\end{enumerate}
+
+\exsect{Задания}
+\begin{enumerate}
+\item Разработайте комбинационный АЛУ, у которого на входе 2 шины операндов \lstinline?a? и \lstinline?b? (разрядность каждой~-- 8 бит) и шина выбора действий (разрядность~-- 2 бита). Выходная сигнал \lstinline?q? содержит 8 бит и равен сумме \lstinline?a? и \lstinline?b? при \lstinline?s = "00"?, разности~-- при \lstinline?s = "01"?, логическому ИЛИ – при \lstinline?s = "10"?, логическому И~-- при \lstinline?s = "11"?.
+    \begin{enumerate}
+    \item Используйте параллельные операторы.
+    \item Используйте последовательные операторы.
+    \end{enumerate}
+\item Определим расстояние между элементами последовательности Грея. Пусть \lstinline?a? и \lstinline?b?~-- элементы последовательности Грея, тогда расстояние между \lstinline?a? и \lstinline?b? определим, как минимальное количество последовательных переходов от элемента \lstinline?a? до элемента \lstinline?b? по последовательности Грея. Например, пусть \lstinline?a = "0101"?, \lstinline?b = "1111"?. Тогда расстояние от \lstinline?a? до \lstinline?b? равно 4, поскольку требуется 4 перехода (см. таблицу с кодом Грея): \lstinline?"0101"? $\rightarrow$ \lstinline?"0100"? $\rightarrow$ \lstinline?"1100"? $\rightarrow$ \lstinline?"1101"? $\rightarrow$ \lstinline?"1111"?. Разработайте схему, вычисляющую расстояние между двумя 4-битными словами \lstinline?a? и \lstinline?b?, записанными в коде Грея.
+\item \textbf{Задания на дополнительный код.} \emph{Дополнительный код} (англ. \emph{two’s complement})~-- наиболее распространённый способ представления отрицательных целых чисел в компьютерах. Он позволяет заменить операцию вычитания на операцию сложения и сделать операции сложения и вычитания одинаковыми для знаковых и беззнаковых чисел, чем упрощает архитектуру ЭВМ. Дополнительный код отрицательного числа можно получить инвертированием модуля двоичного числа и прибавлением к результату инверсии единицы. 
+    \begin{enumerate}
+    \item Разработайте комбинационный конвертер целых чисел со знаком. Схема имеет 2 входа: целое число со знаком \lstinline?a? (разрядность~-- 8 бит), сигнал выбора направления преобразования \lstinline?s? (разрядность~-- 1 бит). Если \lstinline?s = "0"?, то преобразуется целое число со знаком, записанное в дополнительном коде, в целое число со знаком, записанное в прямом коде, а если \lstinline?s = "1"?, то наоборот. Схема имеет единственный выход \lstinline?r? (разрядность~-- 8 бит).
+    \item Используйте параллельные операторы.
+    \item Используйте последовательные операторы.
+    \end{enumerate}
+\end{enumerate}
