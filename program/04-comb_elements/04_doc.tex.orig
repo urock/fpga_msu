@@ -9,9 +9,15 @@
 \subsection{Простое назначение сигналов}
 \begin{Code}
 \begin{lstlisting}
+<<<<<<< HEAD
+status        <= '1';
+even          <= (p1 and p2) or (p3 and p4);
+arith_result  <= a + b + c - 1;
+=======
 status       <= '1';
 even         <= (p1 and p2) or (p3 and p4);
 arith_result <= a + b + c - 1;
+>>>>>>> comb_elements_devel
 \end{lstlisting}
 \end{Code}
 Последнее выражение может быть изображено в виде следующей схемы:
@@ -132,9 +138,15 @@ end right_arch;
           выражение_n;
 \end{lstlisting}
 \end{Code}
+<<<<<<< HEAD
+\textbf{\textit{Пример 1.}} Восьмибитовый мультиплексор 4-в-1.
+=======
 \exsect{Пример 1.} Восьмибитовый мультиплексор 4-в-1.
+>>>>>>> comb_elements_devel
 Рассмотрим комбинационную схему, описываемую таблицей истинности:
-\begin{table}[h]
+
+% \begin{table}[h]
+{
 \centering
 \begin{tabular}{|c|c|}
 \hline
@@ -145,11 +157,35 @@ s           & x      \\ \hline
 \texttt{10} & c      \\
 \texttt{11} & d      \\
 \hline
-\end{tabular}
-\end{table}
+\end{tabular}\par
+}
+% \end{table}
 
 VHDL код, реализующий эту схему такой:
 \begin{Code}
+<<<<<<< HEAD
+    \centering
+    \begin{lstlisting}
+    library ieee;
+    use ieee.std_logic_1164.all;
+
+    entity mux4 is
+        port(
+            a, b, c, d : in std_logic_vector(7 downto 0);
+            s : in  std_logic_vector(1 downto 0);
+            x : out std_logic_vector(7 downto 0)
+        );
+    end mux4;
+
+    architecture cond_arch of mux4 is
+    begin
+        x <= a when (s = "00") else
+             b when (s = "01") else
+             c when (s = "10") else
+             d;
+    end cond_arch;
+    \end{lstlisting}
+=======
 \begin{lstlisting}
 library ieee;
 use ieee.std_logic_1164.all;
@@ -170,13 +206,23 @@ begin
          d;
 end cond_arch;
 \end{lstlisting}
+>>>>>>> comb_elements_devel
 \end{Code}
 
 Сигнал \lstinline?x? – это выходной информационный сигнал; \lstinline?a?, \lstinline?b?, \lstinline?c?, \lstinline?d? – входные информационные сигналы, а \lstinline?s? – это сигнал управления, на основании которого осуществляется выбор одного из вариантов. 
 Рассмотрим еще пару примеров.
 
+<<<<<<< HEAD
+
+
+\textbf{\textit{Пример 2.}} Бинарный дешифратор.
+
+% \begin{table}[h]
+{
+=======
 \exsect{Пример 2.} Бинарный дешифратор.
 \begin{table}[h]
+>>>>>>> comb_elements_devel
 \centering
 \begin{tabular}{|c|c|}
 \hline
@@ -187,8 +233,9 @@ s           & x             \\ \hline
 \texttt{10} & \texttt{0100} \\
 \texttt{11} & \texttt{1000} \\
 \hline
-\end{tabular}
-\end{table}
+\end{tabular}\par
+}
+% \end{table}
 
 \begin{Code}
 \begin{lstlisting}
@@ -212,8 +259,15 @@ end cond_arch;
 \end{lstlisting}
 \end{Code}
 
+<<<<<<< HEAD
+\textbf{\textit{Пример 3.}} Шифратор приоритета.
+
+% \begin{table}[h]
+{
+=======
 \exsect{Пример 3.} Шифратор приоритета.
 \begin{table}[h]
+>>>>>>> comb_elements_devel
 \centering
 \begin{tabular}{|c|c|c|}
 \hline
@@ -225,8 +279,9 @@ r                   & code        & active         \\ \hline
 \texttt{0001}       & \texttt{00} & \texttt{1}     \\
 \texttt{0000}       & \texttt{00} & \texttt{0}     \\
 \hline
-\end{tabular}
-\end{table}
+\end{tabular}\par
+}
+% \end{table}
 
 \begin{Code}
 \begin{lstlisting}
@@ -291,7 +346,10 @@ end cond_arch;
 \end{figure}
 
 Когда мы пишем на VHDL выражение:
+<<<<<<< HEAD
+=======
 
+>>>>>>> comb_elements_devel
 \begin{Code}
 \begin{lstlisting}
 signal_name <= value_expr_1 when boolean_expr_1 else 
@@ -307,7 +365,7 @@ signal_name <= value_expr_1 when boolean_expr_1 else
 \tikzstyle{expr} = [draw, fill=yellow!20, dotted, rectangle, minimum size=2em]
 
 % inputs
-\node[expr] at (-1,2) (input_i1) {\texttt{value\_expr\_1}};
+\node[process] at (-1,2) (input_i1) {\texttt{value\_expr\_1}};
 \node[expr] at (-1,1) (input_i0) {\texttt{value\_expr\_2}};
 \node[expr] at (-1,0) (input_sel) {\texttt{boolean\_expr\_1}};
 
@@ -330,7 +388,10 @@ signal_name <= value_expr_1 when boolean_expr_1 else
 \end{figure}
 
 Каждый следующий уровень ветвления оператора условного назначения сигнала добавляет еще одну ступень в иерархию вместе с еще одним мультиплексором.
+<<<<<<< HEAD
+=======
 
+>>>>>>> comb_elements_devel
 \begin{Code}
 \begin{lstlisting}
 signal_name <= value_expr_1 when boolean_expr_1 else 
@@ -404,7 +465,10 @@ signal_name <= value_expr_1 when boolean_expr_1 else
 \subsection{Оператор выборочного назначения сигнала WITH ... SELECT}
 
 Это параллельный оператор, также реализующий выбор одного из возможных вариантов в зависимости от некоторых управляющих сигналов. Во многом он похож на оператор условного назначения, но есть и отличия. Записать в общем виде его можно так:
+<<<<<<< HEAD
+=======
 
+>>>>>>> comb_elements_devel
 \begin{Code}
 \begin{lstlisting}[mathescape]
 with задающее$\_$выражение select

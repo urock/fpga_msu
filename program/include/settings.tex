@@ -35,18 +35,15 @@
 }
 
 \usepackage{tikz}
-\usetikzlibrary{arrows,calc}
+\usetikzlibrary{arrows,calc,shapes.gates.logic.US}
 
 \makeatletter
 \def\lst@PlaceNumber{\ifnum\value{lstnumber}=0\else
   \llap{\normalfont\lst@numberstyle{\thelstnumber}\kern\lst@numbersep}\fi}
 \makeatother
 
-\usepackage{float}
+\usepackage{float}                          % Управление "плавающими" объектами
 \floatstyle{plain} % optionally change the style of the new float
 \newfloat{Code}{H}{myc}
 
-
-\tikzstyle{expr} = [draw, fill=yellow!20, dotted, rectangle, minimum size=2em]
-
-\tikzstyle{process} = [draw, fill=green!20, rectangle, minimum size=2cm, text width=2cm, align=center]
+\newcommand\exsect[1]{\textbf{\textit{\underline{#1}}}}
