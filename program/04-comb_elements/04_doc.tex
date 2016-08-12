@@ -519,23 +519,55 @@ end sel_arch;
 \centering
 \begin{tikzpicture}[>=latex']
 \tikzstyle{branch}=[fill,shape=circle,minimum size=3pt,inner sep=0pt]
-%
-%
-%
-%
-%
-%
-%
-%
-% TODO. Добавить картинку здесь.
-%
-%
-%
-%
-%
-%
-%
-%
+
+% inputs
+\node (input_A) at (-4,6.5) {\texttt{A}};
+\node (input_B) at (-4,5.5) {\texttt{B}};
+\node (input_C) at (-4,4.5) {\texttt{C}};
+\node (input_D) at (-4,3.5) {\texttt{D}};
+\node (input_S0) at (-4,1.5) {\texttt{S(0)}};
+\node (input_S1) at (-4,1.0) {\texttt{S(1)}};
+
+% mux
+\draw [-,fill=blue!20](1,5) -- (1.5,5.5) -- (1.5,6.5) -- (1,7) -- cycle;
+\node[right] (true_S1) at (1,6.5) {\texttt{T}};
+\node[right] (false_S1) at (1,5.5) {\texttt{F}};
+\node[right] (sel_S1) at (1.25,5.25) {\texttt{S1}};
+
+\draw [-,fill=blue!20](-0.5,4) -- (0,4.5) -- (0,5.5) -- (-0.5,6) -- cycle;
+\node[right] (true_S2) at (-0.5,5.5) {\texttt{T}};
+\node[right] (false_S2) at (-0.5,4.5) {\texttt{F}};
+\node[right] (sel_S2) at (-0.25,4.25) {\texttt{S2}};
+
+\draw [-,fill=blue!20](-2,3) -- (-1.5,3.5) -- (-1.5,4.5) -- (-2,5) -- cycle;
+\node[right] (true_S3) at (-2,4.5) {\texttt{T}};
+\node[right] (false_S3) at (-2,3.5) {\texttt{F}};
+\node[right] (sel_S3) at (-1.75,3.25) {\texttt{S3}};
+
+\node[nor gate US, draw, logic gate inputs=nn] (Nor01) at (0.5,1.25) {};
+\node[not gate US, draw, rotate=90] (Not0) at (-0.25,2.5) {};
+\node[not gate US, draw, rotate=90] (Not1) at (-1.75,2.0) {};
+
+\draw[->] (input_A) -- (true_S1);
+\draw[->] (input_B) -- (true_S2);
+\draw[->] (input_C) -- (true_S3);
+\draw[->] (input_D) -- (false_S3);
+
+\node[right] (out) at (2.5,6) {\texttt{out}};
+\draw[->] (1.5,6) -- (out);
+\draw[->] (0,5) -- (0.5,5) -- (0.5,5.5) -- (false_S1);
+\draw[->] (-1.5,4) -- (-1,4) -- (-1,4.5) -- (false_S2);
+
+\draw[->] (Nor01.output) -| (1.25,5.25);
+\draw[->] (Not0.output) -- (-0.25,4.25);
+\draw[->] (Not1.output) -- (-1.75,3.25);
+
+\draw (-0.25,1.5) node[branch] {} -- (Not0.input);
+\draw (-1.75,1.0) node[branch] {} -- (Not1.input);
+
+\draw (input_S0) -- (-0.25,1.5) -- (-0,1.5) |- (Nor01.input 1);
+\draw (input_S1) -- (-1.75,1.0) -- (-0,1.0) |- (Nor01.input 2);
+
 \end{tikzpicture}
 \caption{Оператор условного назначения.}
 \label{if_hard}
@@ -549,23 +581,54 @@ end sel_arch;
 \centering
 \begin{tikzpicture}[>=latex']
 \tikzstyle{branch}=[fill,shape=circle,minimum size=3pt,inner sep=0pt]
-%
-%
-%
-%
-%
-%
-%
-%
-% TODO. Добавить картинку здесь.
-%
-%
-%
-%
-%
-%
-%
-%
+
+% inputs
+\node (input_A) at (-6.5,8.5) {\texttt{A}};
+\node (input_B) at (-6.5,6.5) {\texttt{B}};
+\node (input_C) at (-6.5,4.5) {\texttt{C}};
+\node (input_D) at (-6.5,2.5) {\texttt{D}};
+\node (input_S0) at (-6.5,1.0) {\texttt{S(0)}};
+\node (input_S1) at (-6.5,0.5) {\texttt{S(1)}};
+
+% gates
+\node[and gate US, draw, logic gate inputs=nnn] (And1) at (-2,8) {};
+\node[and gate US, draw, logic gate inputs=nnn] (And2) at (-2,6) {};
+\node[and gate US, draw, logic gate inputs=nnn] (And3) at (-2,4) {};
+\node[and gate US, draw, logic gate inputs=nnn] (And4) at (-2,2) {};
+\node[or gate US, draw, logic gate inputs=nnnn] (Or1) at (-0,5) {};
+\node[not gate US, draw] (Not1) at (-4.0,8.0) {};
+\node[not gate US, draw] (Not2) at (-3.5,7.5) {};
+\node[not gate US, draw] (Not3) at (-4.0,6.0) {};
+\node[not gate US, draw] (Not4) at (-4.0,3.5) {};
+
+\draw (And1.output) -- (-1,8) |- (Or1.input 1);
+\draw (And2.output) -- (-1.25,6) |- (Or1.input 2);
+\draw (And3.output) -- (-1.25,4) |- (Or1.input 3);
+\draw (And4.output) -- (-1,2) |- (Or1.input 4);
+
+\draw (input_A)     -- (-2.75,8.5) |- (And1.input 1);
+\draw (input_S0) -- (-5.25,1.0) -- (-5.25,8.0) -- (Not1.input);
+\draw (Not1.output) -- (-2.75,8.0) -- (And1.input 2);
+\draw (input_S1) -- (-4.75,0.5) -- (-4.75,7.5) -- (Not2.input);
+\draw (Not2.output) -- (-2.75,7.5) |- (And1.input 3);
+
+\draw (input_B)     -- (-2.75,6.5) |- (And2.input 1);
+\draw (-5.25,6.0) node[branch] {} -- (Not3.input);
+\draw (Not3.output) -- (-2.75,6.0) -- (And2.input 2);
+\draw (-4.75,5.5) node[branch] {} --  (-2.75,5.5) |- (And2.input 3);
+
+\draw (input_C)     -- (-2.75,4.5) |- (And3.input 1);
+\draw (-5.25,4.0) node[branch] {} -- (-2.75,4.0) -- (And3.input 2);
+\draw (-4.75,3.5) node[branch] {} -- (Not4.input);
+\draw (Not4.output) -- (-2.75,3.5) |- (And3.input 3);
+
+\draw (input_D)     -- (-2.75,2.5) |- (And4.input 1);
+\draw (-5.25,2.0) node[branch] {} -- (-2.75,2.0) -- (And4.input 2);
+\draw (-4.75,1.5) node[branch] {} -- (-2.75,1.5) |- (And4.input 3);
+
+\node[right] (out) at (1.75,5) {\texttt{out}};
+\draw[->] (Or1.output) -- (out);
+
 \end{tikzpicture}
 \caption{Оператор выборочного назначения.}
 \label{case_hard}
@@ -833,23 +896,17 @@ end process;
 \centering
 \begin{tikzpicture}[>=latex']
 \tikzstyle{branch}=[fill,shape=circle,minimum size=3pt,inner sep=0pt]
-%
-%
-%
-%
-%
-%
-%
-%
-% TODO. Добавить картинку здесь.
-%
-%
-%
-%
-%
-%
-%
-%
+
+\node[or gate US, draw, logic gate inputs=nn] (Or1) at (0,0) {};
+
+\path let \p1 = (Or1.input 1) in node (ib) at (-1.5,\y1) {\texttt{b}};
+\node (oy) at (2,0) {\texttt{y}};
+
+\draw (ib) -- (Or1.input 1);
+\path[-] (Or1.output) edge node [above] {\texttt{tmp}} (1.25,0);
+\draw[->] (1.25,0) -- (oy);
+\draw (1.25,0) node[branch] {} -- (1.25,-0.5) -- (-0.75,-0.5) |- (Or1.input 2);
+
 \end{tikzpicture}
 \caption{Комбинационная петля.}
 \label{comb_loop}
