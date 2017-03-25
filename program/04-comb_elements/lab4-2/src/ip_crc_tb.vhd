@@ -63,6 +63,26 @@ begin
 
       end loop;   
 
+      head_valid <= '0'; 
+
+      wait until rising_edge(clk); 
+      wait until rising_edge(clk); 
+
+      -- input process
+      crc_input(0) <= ip_head(0) & ip_head(1); 
+      crc_input(1) <= ip_head(2) & ip_head(3); 
+      crc_input(2) <= ip_head(4) & ip_head(5); 
+      crc_input(3) <= ip_head(6) & ip_head(7); 
+      crc_input(4) <= ip_head(8) & ip_head(9); 
+      crc_input(5) <= ip_head(12) & ip_head(13);
+      crc_input(6) <= ip_head(14) & ip_head(15); 
+      crc_input(7) <= ip_head(16) & ip_head(17); 
+      crc_input(8) <= ip_head(18) & ip_head(19);       
+
+      head_valid <= '1'; 
+      wait until rising_edge(clk); 
+      head_valid <= '0'; 
+
       wait; 
    end process;
 
@@ -96,7 +116,7 @@ begin
       Write ( Message, string'("-- Waiting for RTL Output:  "));
       writeline(output, Message);   
 
-      for i in 0 to 2 loop
+      for i in 0 to 7 loop
          wait until rising_edge(clk); 
       end loop;    
 

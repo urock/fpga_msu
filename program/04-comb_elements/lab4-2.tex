@@ -1,3 +1,42 @@
 \subsection{Самостоятельная работа. Вычисление контрольной суммы сетевого IP пакета}
 
-Тут должно быть описание IP пакета, алгоритм вычисления контрольной суммы, готовый тестбенч
+http://www.thegeekstuff.com/2012/05/ip-header-checksum/
+
+\begin{figure}
+\centering
+\includegraphics[width=1.2\textwidth]{04-comb_elements/fig/ip-header-2.png}
+\caption{Выбор файла тестбенча}
+\label{add_sim_src_2}
+\end{figure}
+
+
+The checksum field is the 16 bit one's complement of the one's complement sum of all 16 bit words in the header. 
+
+IP Header Checksum Calculation
+
+IP checksum is a 16-bit field in IP header used for error detection for IP header. It equals to the one’s complement of the one’s complement sum of all 16 bit words in the IP header. The checksum field is initialized to all zeros at computation.
+
+One’s complement sum is calculated by summing all numbers and adding the carry (or carries) to the result. And one’s complement is defined by inverting all 0s and 1s in the number’s bit representation.
+
+For example, if an IP header is 0x4500003044224000800600008c7c19acae241e2b. 
+We start by calculating the one’s complement sum. First, divide the header hex into 16 bits each and sum them up,
+4500 + 0030 + 4422 + 4000 + 8006 + 0000 + 8c7c + 19ac + ae24 + 1e2b = 2BBCF
+Next fold the result into 16 bits by adding the carry to the result,
+2 +  BBCF  = BBD1
+The final step is to compute the one’s complement of the one’s complement’s sum,
+BBD1 = 1011101111010001
+
+IP checksum = one’s complement(1011101111010001) = 0100010000101110 = 442E
+
+
+The validation is done using the same algorithm. But this time the initialized checksum value is 442E.
+2BBCF + 442E = 2FFFD, then 2 + FFFD = FFFF
+Take the one’s complement of FFFF = 0.
+
+At validation, the checksum computation should evaluate to 0 if the IP header is correct.
+
+
+Установка python3-scapy
+
+sudo apt install python3-pip
+sudo pip3 install scapy-python3

@@ -26,15 +26,5 @@ for b in iph_b:
 
 ftxt.close()
 
-# f_txt = open('ip_header.txt', 'w')
-# fbin = open('ip_header.bin', 'wb')
-# fbin2 = open('ip_header.bin', 'wb')
-#
-# # [fbin.write(b) for b in iph_b]
-#
-# newFileByteArray = bytearray(iph_b)
-# fbin2.write(newFileByteArray)
-#
-# # fbin.close()
-# fbin2.close()
+
 
