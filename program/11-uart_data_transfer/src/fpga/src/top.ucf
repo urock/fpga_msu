@@ -31,7 +31,7 @@ NET "Led[7]" LOC = N12;
 NET "reset_n" LOC = T15;
  
 # Bank = 3, Pin name = IO_L1P, 	   		   Sch name = BTNU. Active High
-NET "btnu" LOC = N4;
+# NET "btnu" LOC = N4;
 
  
  

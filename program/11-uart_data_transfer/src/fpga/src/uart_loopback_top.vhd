@@ -2,7 +2,7 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
-entity uart_regs is
+entity uart_loopback is
    port(
       clk      : in std_logic;
       reset_n    : in std_logic;
@@ -10,11 +10,12 @@ entity uart_regs is
       rx_line 	: in std_logic;
       tx_line 	: out std_logic;	  
       
+      btnu     : in std_logic;
       Led      : out std_logic_vector(7 downto 0)
    );
-end uart_regs;
+end uart_loopback;
 
-architecture arch of uart_regs is
+architecture arch of uart_loopback is
 
    signal uart_m_tdata : std_logic_vector(7 downto 0);
    signal uart_m_tvalid: std_logic;
@@ -59,6 +60,13 @@ uart_unit: entity work.uart(str_arch)
       s_tready	   => uart_s_tready
    );
    
+uart_s_tvalid <= uart_m_tvalid; 
+uart_m_tready <= uart_s_tready; 
+   
+            
+-- incremented data loop back
+uart_s_tdata <= std_logic_vector(unsigned(uart_m_tdata)+1);
+
 --  led display
 led(5 downto 0) <= uart_m_tdata(5 downto 0);
 
@@ -75,23 +83,5 @@ led(5 downto 0) <= uart_m_tdata(5 downto 0);
 	
 Led(7) <= clk_cnt(26); 
 Led(6) <= clk_cnt(26); 
-
-
--- instantiate user
-user_unit: entity work.user(rtl)
-   port map(
-      clk 		=> clk,
-      reset_n 	=> reset_n,
-
-      -- UART RX interface
-      s_tdata	=> uart_m_tdata,
-      s_tvalid	=> uart_m_tvalid,
-      s_tready	=> uart_m_tready,
-      
-      -- UART TX interface
-      m_tdata	=> uart_s_tdata,
-      m_tvalid	=> uart_s_tvalid,
-      m_tready	=> uart_s_tready
-   );
 
 end arch;
