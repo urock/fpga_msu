@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity uart_regs is
    port(
       clk      : in std_logic;
---      reset_n    : in std_logic;
+      reset    : in std_logic;
       
       rx_line 	: in std_logic;
       tx_line 	: out std_logic;	  
@@ -26,7 +26,6 @@ architecture arch of uart_regs is
    
 	
    signal clk_cnt : std_logic_vector(26 downto 0); 
-   signal reset : std_logic; 
     
 -- ATTRIBUTE MARK_DEBUG : string;
 -- ATTRIBUTE MARK_DEBUG of rx_tdata: SIGNAL IS "TRUE";
@@ -37,9 +36,8 @@ architecture arch of uart_regs is
     
 begin
 
-reset_n <= '1'; 
+reset_n <=  not reset; 
 
-reset <= not reset_n; 
 
 -- instantiate uart
 uart_unit: entity work.uart(str_arch)

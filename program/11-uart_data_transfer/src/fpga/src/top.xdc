@@ -11,3 +11,6 @@ set_property -dict { PACKAGE_PIN D18   IOSTANDARD LVCMOS33 } [get_ports { led[3]
 ##Pmod Header JE
 set_property -dict { PACKAGE_PIN V12   IOSTANDARD LVCMOS33 } [get_ports { rx_line }]; #IO_L4P_T0_34 Sch=JE1 upper right. Connect to FTDI TX
 set_property -dict { PACKAGE_PIN W16   IOSTANDARD LVCMOS33 } [get_ports { tx_line }]; #IO_L18N_T2_34 Sch=JE2 upper next to right. Connect to FTDI RX
+
+#reset
+set_property -dict { PACKAGE_PIN Y16   IOSTANDARD LVCMOS33 } [get_ports { reset }]; #IO_L7P_T1_34 Sch=BTN3
