@@ -5,12 +5,12 @@ use ieee.numeric_std.all;
 entity uart_regs is
    port(
       clk      : in std_logic;
-      reset_n    : in std_logic;
+--      reset_n    : in std_logic;
       
       rx_line 	: in std_logic;
       tx_line 	: out std_logic;	  
       
-      Led      : out std_logic_vector(7 downto 0)
+      led      : out std_logic_vector(3 downto 0)
    );
 end uart_regs;
 
@@ -33,8 +33,11 @@ architecture arch of uart_regs is
 -- ATTRIBUTE MARK_DEBUG of m_tvalid: SIGNAL IS "TRUE";
 -- ATTRIBUTE MARK_DEBUG of m_tready: SIGNAL IS "TRUE";
 
+    signal reset_n : std_logic;
     
 begin
+
+reset_n <= '1'; 
 
 reset <= not reset_n; 
 
@@ -60,7 +63,7 @@ uart_unit: entity work.uart(str_arch)
    );
    
 --  led display
-led(5 downto 0) <= uart_m_tdata(5 downto 0);
+led(2 downto 0) <= uart_m_tdata(2 downto 0);
 
    process(clk)
    begin
@@ -73,8 +76,7 @@ led(5 downto 0) <= uart_m_tdata(5 downto 0);
       end if;
    end process;
 	
-Led(7) <= clk_cnt(26); 
-Led(6) <= clk_cnt(26); 
+led(3) <= clk_cnt(26); 
 
 
 -- instantiate user

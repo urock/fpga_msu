@@ -9,8 +9,8 @@ entity uart is
       DBIT: integer:=8;     -- # data bits
       SB_TICK: integer:=16; -- # ticks for stop bits, 16/24/32
                             --   for 1/1.5/2 stop bits
-      DVSR: integer:= 54;  -- baud rate divisor
-                            -- DVSR = 100M/(16*baud rate)
+      DVSR: integer:= 67;  -- baud rate divisor
+                            -- DVSR = 125M/(16*baud rate)
       DVSR_BIT: integer:=7; -- # bits of DVSR
       FIFO_W: integer:=2    -- # addr bits of FIFO
                             -- # words in FIFO=2^FIFO_W
@@ -36,6 +36,21 @@ entity uart is
 end uart;
 
 architecture str_arch of uart is
+
+COMPONENT uart_fifo
+  PORT (
+    s_aclk : IN STD_LOGIC;
+    s_aresetn : IN STD_LOGIC;
+    s_axis_tvalid : IN STD_LOGIC;
+    s_axis_tready : OUT STD_LOGIC;
+    s_axis_tdata : IN STD_LOGIC_VECTOR(7 DOWNTO 0);
+    m_axis_tvalid : OUT STD_LOGIC;
+    m_axis_tready : IN STD_LOGIC;
+    m_axis_tdata : OUT STD_LOGIC_VECTOR(7 DOWNTO 0)
+  );
+END COMPONENT;
+
+
    signal tick: std_logic;
    signal rx_done_tick: std_logic;
    signal rx_data_out: std_logic_vector(7 downto 0);
@@ -68,7 +83,7 @@ begin
                s_tick=>tick, rx_done_tick=>rx_done_tick,
                dout=>rx_data_out);
                
-   fifo_rx_unit : entity work.uart_fifo
+   fifo_rx_unit : uart_fifo
      PORT MAP (
        s_aclk => clk,
        s_aresetn => reset_n,
@@ -78,12 +93,11 @@ begin
        
        m_axis_tvalid => m_tvalid,
        m_axis_tready => m_tready,
-       m_axis_tdata => m_tdata,
-       axis_prog_full => open
+       m_axis_tdata => m_tdata
      );
                                 
                
-    fifo_tx_unit : entity work.uart_fifo
+    fifo_tx_unit : uart_fifo
       PORT MAP (
         s_aclk => clk,
         s_aresetn => reset_n,
@@ -93,8 +107,7 @@ begin
         
         m_axis_tvalid => fifo_tx_tvalid,
         m_axis_tready => fifo_tx_tready,
-        m_axis_tdata => fifo_tx_tdata,
-        axis_prog_full => open
+        m_axis_tdata => fifo_tx_tdata
       );
    
    uart_tx_unit: entity work.uart_tx(arch)

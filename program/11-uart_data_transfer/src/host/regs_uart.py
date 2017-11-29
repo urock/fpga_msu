@@ -1,7 +1,7 @@
 import serial
 
 ser = serial.Serial(
-    port='COM3',
+    port='/dev/ttyUSB0',
     baudrate=115200,
     timeout=1
 )
@@ -12,7 +12,7 @@ ser.isOpen()
 
 print("Initializing the device ..")
 
-ser.write(bytes([12]))
+ser.write(bytes([2]))
 
 b = ser.read()
 
